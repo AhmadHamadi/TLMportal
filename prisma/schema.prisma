@@ -1,0 +1,581 @@
+// TLM Portal — Prisma schema
+// See docs/DATA_MODEL.md for rationale and conventions.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================
+// Enums
+// ============================================================
+
+enum UserRole {
+  ADMIN
+  CONTRACTOR
+}
+
+enum CustomerStatus {
+  ACTIVE
+  PAUSED
+  WINTER_MODE
+  CANCELLED
+}
+
+enum LeadSource {
+  LANDING_PAGE_FORM
+  GOOGLE_ADS_LEAD_FORM
+  TRACKING_PHONE_CALL
+  SMS_REPLY
+  MANUAL_ADMIN_ENTRY
+  QUOTE_BUTTON
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  APPOINTMENT_REQUESTED
+  APPOINTMENT_CONFIRMED
+  SENT_TO_CONTRACTOR
+  ACCEPTED_BY_CONTRACTOR
+  DECLINED_BY_CONTRACTOR
+  COMPLETED_ESTIMATE
+  QUOTED
+  WON
+  LOST
+  DISPUTED
+  NOT_BILLABLE
+  CANCELLED
+  DUPLICATE
+  SPAM
+}
+
+enum BillableStatus {
+  PENDING
+  BILLABLE
+  NOT_BILLABLE
+  DISPUTED
+}
+
+enum NotBillableReason {
+  SPAM
+  WRONG_NUMBER
+  DUPLICATE_30D
+  OUTSIDE_SERVICE_AREA
+  SERVICE_NOT_OFFERED
+  BELOW_MIN_JOB_SIZE
+  CANCELLED_BEFORE_CONFIRMATION
+  EXISTING_CUSTOMER
+  EMPLOYMENT_REQUEST
+  VENDOR_INQUIRY
+  DIY_QUESTION
+  OTHER
+}
+
+enum AppointmentStatus {
+  REQUESTED
+  CONFIRMED
+  SENT_TO_CONTRACTOR
+  ACCEPTED
+  DECLINED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum DisputeStatus {
+  OPEN
+  APPROVED
+  REJECTED
+}
+
+enum BillingType {
+  MONTHLY_RETAINER
+  SETUP_FEE
+  APPOINTMENT_FEE
+  CREDIT
+  ADJUSTMENT
+}
+
+enum BillingStatus {
+  PENDING
+  APPROVED
+  INVOICED
+  PAID
+  VOID
+}
+
+enum CallDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum SmsDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum TrackingNumberStatus {
+  ACTIVE
+  INACTIVE
+  RELEASED
+}
+
+enum NotificationStatus {
+  UNREAD
+  READ
+  ARCHIVED
+}
+
+enum NotificationCategory {
+  LEAD
+  BILLING
+  DISPUTE
+  SYSTEM
+}
+
+// ============================================================
+// Auth + Tenancy
+// ============================================================
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String?
+  role          UserRole  @default(CONTRACTOR)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  customerLinks    CustomerUser[]
+  reviewedDisputes Dispute[]      @relation("DisputeReviewer")
+  leadEvents       LeadEvent[]
+  notifications    Notification[]
+  auditLogs        AuditLog[]
+  accounts         Account[]
+  sessions         Session[]
+
+  @@index([role])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Customer {
+  id                  String         @id @default(cuid())
+  slug                String         @unique
+  businessName        String
+  contactName         String
+  email               String
+  phone               String
+  forwardingPhone     String
+  websiteUrl          String?
+  landingPageUrl      String?
+  googleAdsCustomerId String?
+  setupFee            Decimal        @default(0) @db.Decimal(10, 2)
+  monthlyRetainer     Decimal        @default(0) @db.Decimal(10, 2)
+  appointmentFee      Decimal        @default(0) @db.Decimal(10, 2)
+  monthlyAdBudget     Decimal        @default(0) @db.Decimal(10, 2)
+  minProjectSize      Decimal?       @db.Decimal(10, 2)
+  disputeWindowHours  Int            @default(48)
+  status              CustomerStatus @default(ACTIVE)
+  notes               String?        @db.Text
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  deletedAt           DateTime?
+
+  users              CustomerUser[]
+  services           Service[]
+  serviceAreas       ServiceArea[]
+  trackingNumbers    TrackingNumber[]
+  leads              Lead[]
+  callLogs           CallLog[]
+  smsMessages        SmsMessage[]
+  appointments       Appointment[]
+  disputes           Dispute[]
+  billingRecords     BillingRecord[]
+  stripeSubscription StripeSubscription?
+  googleAdsSpend     GoogleAdsSpend[]
+  automationRules    AutomationRule[]
+  notifications      Notification[]
+  auditLogs          AuditLog[]
+
+  @@index([status, deletedAt])
+}
+
+model CustomerUser {
+  id         String   @id @default(cuid())
+  userId     String
+  customerId String
+  role       UserRole @default(CONTRACTOR)
+  createdAt  DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, customerId])
+  @@index([customerId])
+}
+
+// ============================================================
+// Customer config
+// ============================================================
+
+model Service {
+  id         String   @id @default(cuid())
+  customerId String
+  name       String
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([customerId, name])
+  @@index([customerId, isActive])
+}
+
+model ServiceArea {
+  id            String   @id @default(cuid())
+  customerId    String
+  city          String
+  neighbourhood String?
+  province      String   @default("ON")
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, isActive])
+  @@index([customerId, city])
+}
+
+model TrackingNumber {
+  id                    String               @id @default(cuid())
+  customerId            String
+  twilioPhoneNumber     String               @unique
+  twilioSid             String?              @unique
+  forwardingPhoneNumber String
+  label                 String?
+  status                TrackingNumberStatus @default(ACTIVE)
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, status])
+}
+
+// ============================================================
+// Leads + activity
+// ============================================================
+
+model Lead {
+  id                   String             @id @default(cuid())
+  customerId           String
+  source               LeadSource
+  firstName            String?
+  lastName             String?
+  phone                String?
+  email                String?
+  city                 String?
+  neighbourhood        String?
+  address              String?
+  serviceRequested     String?
+  projectDetails       String?            @db.Text
+  estimatedProjectSize Decimal?           @db.Decimal(10, 2)
+  preferredTime        String?
+  status               LeadStatus         @default(NEW)
+  billableStatus       BillableStatus     @default(PENDING)
+  notBillableReason    NotBillableReason?
+  sourceCampaign       String?
+  sourceAdGroup        String?
+  sourceKeyword        String?
+  googleLeadId         String?            @unique
+  dedupeHash           String?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  deletedAt            DateTime?
+
+  customer    Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  events      LeadEvent[]
+  callLogs    CallLog[]
+  smsMessages SmsMessage[]
+  appointment Appointment?
+  disputes    Dispute[]
+  billingRows BillingRecord[]
+
+  @@index([customerId, status])
+  @@index([customerId, createdAt])
+  @@index([customerId, phone])
+  @@index([customerId, billableStatus])
+  @@index([dedupeHash])
+}
+
+model LeadEvent {
+  id              String   @id @default(cuid())
+  leadId          String
+  type            String
+  description     String?
+  metadata        Json?
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+
+  lead          Lead  @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  createdByUser User? @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([leadId, createdAt])
+  @@index([type])
+}
+
+model CallLog {
+  id                       String        @id @default(cuid())
+  leadId                   String?
+  customerId               String
+  fromNumber               String
+  toNumber                 String
+  trackingNumber           String
+  callSid                  String        @unique
+  durationSeconds          Int           @default(0)
+  recordingUrl             String?
+  recordingDurationSeconds Int?
+  callStatus               String
+  direction                CallDirection
+  createdAt                DateTime      @default(now())
+
+  lead     Lead?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, createdAt])
+  @@index([leadId, createdAt])
+}
+
+model SmsMessage {
+  id                String       @id @default(cuid())
+  leadId            String?
+  customerId        String
+  fromNumber        String
+  toNumber          String
+  body              String       @db.Text
+  direction         SmsDirection
+  providerMessageId String       @unique
+  status            String       @default("queued")
+  createdAt         DateTime     @default(now())
+
+  lead     Lead?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, createdAt])
+  @@index([leadId, createdAt])
+}
+
+// ============================================================
+// Appointments
+// ============================================================
+
+model Appointment {
+  id                     String             @id @default(cuid())
+  leadId                 String             @unique
+  customerId             String
+  appointmentWindowStart DateTime?
+  appointmentWindowEnd   DateTime?
+  confirmedAt            DateTime?
+  sentToContractorAt     DateTime?
+  acceptedByContractorAt DateTime?
+  completedAt            DateTime?
+  cancelledAt            DateTime?
+  status                 AppointmentStatus  @default(REQUESTED)
+  isBillable             Boolean            @default(false)
+  notBillableReason      NotBillableReason?
+  disputeWindowEndsAt    DateTime?
+  notes                  String?            @db.Text
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+
+  lead     Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  customer Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  disputes Dispute[]
+
+  @@index([customerId, status])
+  @@index([customerId, createdAt])
+  @@index([disputeWindowEndsAt])
+}
+
+model Dispute {
+  id               String        @id @default(cuid())
+  leadId           String
+  appointmentId    String?
+  customerId       String
+  reason           String
+  details          String?       @db.Text
+  status           DisputeStatus @default(OPEN)
+  submittedAt      DateTime      @default(now())
+  reviewedAt       DateTime?
+  reviewedByUserId String?
+  decisionNote     String?       @db.Text
+  auditTrail       Json?
+
+  lead        Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  appointment Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  customer    Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  reviewedBy  User?        @relation("DisputeReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([customerId, status])
+  @@index([leadId])
+}
+
+// ============================================================
+// Billing
+// ============================================================
+
+model BillingRecord {
+  id                  String        @id @default(cuid())
+  customerId          String
+  leadId              String?
+  appointmentId       String?
+  type                BillingType
+  amount              Decimal       @db.Decimal(10, 2)
+  status              BillingStatus @default(PENDING)
+  stripeInvoiceId     String?
+  stripeInvoiceItemId String?       @unique
+  billingMonth        String
+  description         String?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  lead     Lead?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  @@index([customerId, billingMonth])
+  @@index([customerId, status])
+  @@index([customerId, type])
+}
+
+model StripeSubscription {
+  id                   String   @id @default(cuid())
+  customerId           String   @unique
+  stripeCustomerId     String   @unique
+  stripeSubscriptionId String   @unique
+  status               String
+  currentPeriodStart   DateTime
+  currentPeriodEnd     DateTime
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+}
+
+model GoogleAdsSpend {
+  id          String   @id @default(cuid())
+  customerId  String
+  month       String
+  spendAmount Decimal  @db.Decimal(10, 2)
+  impressions Int?
+  clicks      Int?
+  conversions Int?
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([customerId, month])
+  @@index([customerId, month])
+}
+
+// ============================================================
+// Automation, notifications, audit
+// ============================================================
+
+model AutomationRule {
+  id         String   @id @default(cuid())
+  customerId String
+  name       String
+  trigger    String
+  conditions Json?
+  action     Json
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, isActive])
+  @@index([trigger])
+}
+
+model Notification {
+  id         String               @id @default(cuid())
+  userId     String?
+  customerId String?
+  category   NotificationCategory @default(SYSTEM)
+  title      String
+  message    String               @db.Text
+  link       String?
+  status     NotificationStatus   @default(UNREAD)
+  createdAt  DateTime             @default(now())
+
+  user     User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([customerId, createdAt])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  customerId String?
+  action     String
+  entityType String
+  entityId   String
+  before     Json?
+  after      Json?
+  metadata   Json?
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  user     User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+  @@index([userId, createdAt])
+  @@index([customerId, createdAt])
+}
