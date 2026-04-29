@@ -6,8 +6,8 @@
 - Re-export Prisma enums from `types/enums.ts` so callers don't import from `@prisma/client` everywhere.
 
 ## Imports
-- Path alias `@/*` â†’ project root.
-- Group: node/react â†’ third-party â†’ `@/lib` â†’ `@/server` â†’ `@/components` â†’ relative.
+- Path alias `@/*` -> project root.
+- Group: node/react -> third-party -> `@/lib` -> `@/server` -> `@/components` -> relative.
 
 ## Server actions vs route handlers
 - Use server actions for form submits and dashboard mutations.
@@ -21,7 +21,7 @@
   const input = mySchema.parse(rawInput);
   ```
 - Webhook handlers parse with Zod after signature verification.
-- Forms use `react-hook-form` + `zodResolver` on the client; the same Zod schema is used by the server action â€” single source of truth in `schemas/`.
+- Forms use `react-hook-form` + `zodResolver` on the client; the same Zod schema is used by the server action, giving us a single source of truth in `schemas/`.
 
 ## Auth guard usage
 ```ts
@@ -56,7 +56,7 @@ scopeToCustomer(ctx, customerId); // throws if not linked
 
 ## Errors
 - Server actions return `{ ok: true, data } | { ok: false, error }`. Don't throw across the boundary except for auth/permission errors that the framework will turn into 401/403.
-- In services, throw typed errors (`NotFoundError`, `ForbiddenError`, `ValidationError`) â€” actions catch and translate.
+- In services, throw typed errors (`NotFoundError`, `ForbiddenError`, `ValidationError`); actions catch and translate.
 - Log unexpected errors with the requestId from proxy/request context.
 
 ## UI
@@ -73,13 +73,13 @@ scopeToCustomer(ctx, customerId); // throws if not linked
 - Routes: `/admin/leads/[leadId]` (always `[entityId]`).
 
 ## Comments
-- Default to none. Only when the *why* is non-obvious â€” invariants, workarounds, regulatory rules.
+- Default to none. Only when the why is non-obvious: invariants, workarounds, regulatory rules.
 - Never narrate what code does.
 
 ## Tests
 - Vitest for services. One test file per service.
 - Each test runs against a transactional Prisma sandbox or a mock.
-- Playwright after Phase 5 for the lead â†’ appointment â†’ dispute happy path.
+- Playwright after Phase 5 for the lead -> appointment -> review happy path.
 
 ## Git
 - Conventional commits: `feat:`, `fix:`, `chore:`, `refactor:`, `docs:`.

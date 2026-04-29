@@ -201,25 +201,21 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           }
         } else if (reply === "BAD") {
           await db.$transaction(async (tx) => {
-            await tx.dispute.create({
-              data: {
-                leadId: recent.leadId,
-                appointmentId: recent.id,
-                customerId,
-                reason: "Contractor flagged via SMS (BAD)",
-                details: body,
-                status: "OPEN",
-              },
-            });
-            await tx.lead.update({
-              where: { id: recent.leadId },
-              data: { status: "DISPUTED", billableStatus: "DISPUTED" },
-            });
             await tx.leadEvent.create({
               data: {
                 leadId: recent.leadId,
-                type: "DISPUTE_OPENED",
-                description: "Contractor BAD reply opened dispute",
+                type: "LEAD_REVIEW_REQUESTED",
+                description: "Contractor replied BAD by SMS; admin review required before any billing change",
+                metadata: { appointmentId: recent.id, body },
+              },
+            });
+            await tx.notification.create({
+              data: {
+                customerId,
+                category: "DISPUTE",
+                title: "Lead review requested by SMS",
+                message: `Contractor replied BAD for lead ${recent.leadId}. Review evidence before changing billing.`,
+                link: `/admin/leads/${recent.leadId}`,
               },
             });
           });

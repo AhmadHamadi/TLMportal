@@ -16,7 +16,7 @@ import { ShieldAlert } from "lucide-react";
 import { formatDateTime } from "@/lib/dates";
 import { reviewDisputeAction } from "@/server/actions/disputes";
 
-export const metadata = { title: "Disputes — Admin" };
+export const metadata = { title: "Lead Reviews - Admin" };
 
 export default async function AdminDisputesPage() {
   const ctx = await requireAdmin();
@@ -25,11 +25,13 @@ export default async function AdminDisputesPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Disputes</h1>
-        <p className="text-sm text-muted-foreground">Review and resolve contractor disputes.</p>
+        <h1 className="text-2xl font-semibold tracking-tight">Lead reviews</h1>
+        <p className="text-sm text-muted-foreground">
+          Review quality concerns without letting contractor requests automatically void billing.
+        </p>
       </div>
       {items.length === 0 ? (
-        <EmptyState icon={ShieldAlert} title="No disputes" />
+        <EmptyState icon={ShieldAlert} title="No lead reviews" />
       ) : (
         <div className="rounded-md border bg-card">
           <Table>
@@ -48,11 +50,13 @@ export default async function AdminDisputesPage() {
                 <TableRow key={d.id}>
                   <TableCell className="text-sm">{d.customer.businessName}</TableCell>
                   <TableCell className="text-sm">
-                    {[d.lead.firstName, d.lead.lastName].filter(Boolean).join(" ") || "—"}
+                    {[d.lead.firstName, d.lead.lastName].filter(Boolean).join(" ") || "-"}
                   </TableCell>
                   <TableCell className="text-sm max-w-xs truncate">{d.reason}</TableCell>
                   <TableCell className="text-xs">{formatDateTime(d.submittedAt)}</TableCell>
-                  <TableCell><StatusBadge status={d.status} /></TableCell>
+                  <TableCell>
+                    <StatusBadge status={d.status} />
+                  </TableCell>
                   <TableCell className="space-x-2">
                     <Link
                       href={`/admin/leads/${d.leadId}`}
@@ -65,12 +69,16 @@ export default async function AdminDisputesPage() {
                         <form action={reviewDisputeAction} className="inline">
                           <input type="hidden" name="disputeId" value={d.id} />
                           <input type="hidden" name="decision" value="APPROVED" />
-                          <Button type="submit" size="sm" variant="outline">Approve</Button>
+                          <Button type="submit" size="sm" variant="outline">
+                            Approve
+                          </Button>
                         </form>
                         <form action={reviewDisputeAction} className="inline">
                           <input type="hidden" name="disputeId" value={d.id} />
                           <input type="hidden" name="decision" value="REJECTED" />
-                          <Button type="submit" size="sm" variant="outline">Reject</Button>
+                          <Button type="submit" size="sm" variant="outline">
+                            Reject
+                          </Button>
                         </form>
                       </>
                     ) : null}

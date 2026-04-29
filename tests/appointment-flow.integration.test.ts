@@ -3,7 +3,7 @@ import {
   createAppointment,
   decideAppointment,
 } from "@/server/services/appointments";
-import { fileDispute, DisputeWindowError } from "@/server/services/disputes";
+import { fileDispute } from "@/server/services/disputes";
 import { createLead } from "@/server/services/leads";
 import { type AuthCtx } from "@/lib/auth-guard";
 import { getSeededCustomers, getSeededUsers, testDb } from "./helpers";
@@ -13,7 +13,7 @@ describe("appointment + dispute flow (integration vs Neon)", () => {
     await testDb.$disconnect();
   });
 
-  it("ACCEPT path: lead + appointment → contractor accept → billable + dispute window set", async () => {
+  it("ACCEPT path: lead + appointment -> contractor accept -> billable + admin-reviewed dispute", async () => {
     const { admin, atlasUser } = await getSeededUsers();
     const { atlas } = await getSeededCustomers();
     const adminCtx: AuthCtx = { role: "ADMIN", userId: admin.id };
@@ -61,11 +61,19 @@ describe("appointment + dispute flow (integration vs Neon)", () => {
     expect(updatedLead?.status).toBe("ACCEPTED_BY_CONTRACTOR");
     expect(updatedLead?.billableStatus).toBe("BILLABLE");
 
-    // Filing a dispute inside the window should succeed
-    const dispute = await fileDispute(contractorCtx, {
+    await expect(
+      fileDispute(contractorCtx, {
+        appointmentId: appt.id,
+        reason: "Spam or fake lead",
+        details: "Contractor should contact TLM instead",
+      }),
+    ).rejects.toThrow("Contact TLM");
+
+    // Admin can open a formal dispute/review after checking the evidence.
+    const dispute = await fileDispute(adminCtx, {
       appointmentId: appt.id,
       reason: "Spam or fake lead",
-      details: "Test dispute",
+      details: "Admin-reviewed test dispute",
     });
     expect(dispute.status).toBe("OPEN");
 
@@ -171,8 +179,17 @@ describe("appointment + dispute flow (integration vs Neon)", () => {
         reason: "Other",
         details: "Past window",
       }),
-    ).rejects.toBeInstanceOf(DisputeWindowError);
+    ).rejects.toThrow("Contact TLM");
 
+    await expect(
+      fileDispute(adminCtx, {
+        appointmentId: appt.id,
+        reason: "Other",
+        details: "Past window admin review",
+      }),
+    ).resolves.toMatchObject({ status: "OPEN" });
+
+    await testDb.dispute.deleteMany({ where: { appointmentId: appt.id } });
     await testDb.appointment.delete({ where: { id: appt.id } });
     await testDb.leadEvent.deleteMany({ where: { leadId: lead.id } });
     await testDb.lead.delete({ where: { id: lead.id } });

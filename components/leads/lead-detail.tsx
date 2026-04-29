@@ -1,9 +1,13 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+﻿import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { formatDateTime } from "@/lib/dates";
 import { formatMoney } from "@/lib/money";
 import { formatNational } from "@/lib/phone";
+import {
+  canRevealLeadContactToContractor,
+  contractorLeadVisibilityMessage,
+} from "@/lib/lead-visibility";
 import { LeadStatusForm } from "./lead-status-form";
 import { LeadBillableForm } from "./lead-billable-form";
 import { AppointmentSection } from "./appointment-section";
@@ -29,6 +33,9 @@ export function LeadDetail({
   lead: LeadWithRelations;
   viewerRole: "ADMIN" | "CONTRACTOR";
 }) {
+  const canRevealContact =
+    viewerRole === "ADMIN" || canRevealLeadContactToContractor(lead);
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
@@ -41,7 +48,7 @@ export function LeadDetail({
             <StatusBadge status={lead.billableStatus} />
           </div>
           <p className="text-sm text-muted-foreground mt-1">
-            {lead.customer.businessName} · {lead.source.replace(/_/g, " ")} · created{" "}
+            {lead.customer.businessName} - {lead.source.replace(/_/g, " ")} - created{" "}
             {formatDateTime(lead.createdAt)}
           </p>
         </div>
@@ -51,20 +58,30 @@ export function LeadDetail({
         <Card className="lg:col-span-2">
           <CardHeader><CardTitle>Lead details</CardTitle></CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <Row label="Phone" value={lead.phone ? formatNational(lead.phone) : "—"} />
-            <Row label="Email" value={lead.email ?? "—"} />
+            {viewerRole === "CONTRACTOR" && !canRevealContact ? (
+              <div className="mb-3 rounded-md border bg-muted/50 p-3 text-xs text-muted-foreground">
+                {contractorLeadVisibilityMessage(lead)}
+              </div>
+            ) : null}
+            <Row
+              label="Phone"
+              value={canRevealContact && lead.phone ? formatNational(lead.phone) : "-"}
+            />
+            <Row label="Email" value={canRevealContact ? (lead.email ?? "-") : "-"} />
             <Row
               label="Location"
               value={
-                [lead.address, lead.neighbourhood, lead.city].filter(Boolean).join(", ") || "—"
+                canRevealContact
+                  ? [lead.address, lead.neighbourhood, lead.city].filter(Boolean).join(", ") || "-"
+                  : [lead.neighbourhood, lead.city].filter(Boolean).join(", ") || "-"
               }
             />
-            <Row label="Service requested" value={lead.serviceRequested ?? "—"} />
+            <Row label="Service requested" value={lead.serviceRequested ?? "-"} />
             <Row
               label="Project size estimate"
-              value={lead.estimatedProjectSize ? formatMoney(lead.estimatedProjectSize) : "—"}
+              value={lead.estimatedProjectSize ? formatMoney(lead.estimatedProjectSize) : "-"}
             />
-            <Row label="Preferred time" value={lead.preferredTime ?? "—"} />
+            <Row label="Preferred time" value={lead.preferredTime ?? "-"} />
             {lead.projectDetails ? (
               <>
                 <Separator />
@@ -115,7 +132,7 @@ export function LeadDetail({
                   <div className="font-medium">{e.type.replace(/_/g, " ")}</div>
                   <div className="text-muted-foreground text-xs">
                     {formatDateTime(e.createdAt)}
-                    {e.createdByUser ? ` · ${e.createdByUser.name ?? e.createdByUser.email}` : ""}
+                    {e.createdByUser ? ` - ${e.createdByUser.name ?? e.createdByUser.email}` : ""}
                   </div>
                   {e.description ? <div className="mt-1">{e.description}</div> : null}
                 </li>

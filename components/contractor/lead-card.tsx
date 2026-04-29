@@ -1,8 +1,12 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { Phone, MessageSquare, ChevronRight } from "lucide-react";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { formatNational } from "@/lib/phone";
 import { formatDateTime } from "@/lib/dates";
+import {
+  canRevealLeadContactToContractor,
+  contractorLeadVisibilityMessage,
+} from "@/lib/lead-visibility";
 
 type LeadCardLead = {
   id: string;
@@ -14,11 +18,14 @@ type LeadCardLead = {
   status: string;
   billableStatus: string;
   createdAt: Date;
+  appointment?: { status: string } | null;
 };
 
 export function LeadCard({ lead }: { lead: LeadCardLead }) {
   const name =
     [lead.firstName, lead.lastName].filter(Boolean).join(" ") || "Unnamed lead";
+  const canRevealContact = canRevealLeadContactToContractor(lead);
+
   return (
     <article className="rounded-lg border bg-card p-4 shadow-sm">
       <div className="flex items-start justify-between gap-2">
@@ -30,8 +37,8 @@ export function LeadCard({ lead }: { lead: LeadCardLead }) {
             {name}
           </Link>
           <div className="mt-0.5 text-sm text-muted-foreground truncate">
-            {lead.serviceRequested ?? "—"}
-            {lead.city ? ` · ${lead.city}` : ""}
+            {lead.serviceRequested ?? "-"}
+            {lead.city ? ` - ${lead.city}` : ""}
           </div>
         </div>
         <Link
@@ -51,7 +58,7 @@ export function LeadCard({ lead }: { lead: LeadCardLead }) {
         </span>
       </div>
 
-      {lead.phone ? (
+      {lead.phone && canRevealContact ? (
         <div className="mt-4 grid grid-cols-2 gap-2">
           <a
             href={`tel:${lead.phone}`}
@@ -68,7 +75,11 @@ export function LeadCard({ lead }: { lead: LeadCardLead }) {
             Text
           </a>
         </div>
-      ) : null}
+      ) : (
+        <div className="mt-4 rounded-md border bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+          {contractorLeadVisibilityMessage(lead)}
+        </div>
+      )}
     </article>
   );
 }

@@ -97,6 +97,12 @@ Read docs/AI_MCP_OPPORTUNITIES.md before adding AI features, browser testing, MC
 ## Client Onboarding Access
 Read docs/CLIENT_ONBOARDING_ACCESS.md before changing contractor account setup, Google Ads, Google Business Profile, Search Console, domain/DNS, or review-request workflows.
 
+## Lead Visibility And Billing
+Read docs/LEAD_VISIBILITY_BILLING_POLICY.md before changing contractor lead lists, lead detail pages, appointment billing, call tracking, or contact reveal rules.
+
+## Agency Workflow Research
+Read docs/AGENCY_WORKFLOW_RESEARCH.md before changing admin dashboard priorities, lead qualification workflow, reporting, or pay-per-appointment policy. Avoid HomeAdvisor-style overclaims: separate raw leads, qualified leads, booked appointments, billable appointments, disputes, and won jobs.
+
 ## Known Future Work
 - Real Google Ads API integration to replace manual spend entry.
 - Vercel Blob or other storage for uploaded/signed contracts.

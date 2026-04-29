@@ -145,8 +145,94 @@ export function CustomerForm({ customer }: { customer?: Customer }) {
       </section>
 
       <section className="space-y-4">
+        <h3 className="text-sm font-medium text-muted-foreground">Services sold</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <label className="flex items-start gap-2 rounded-md border bg-card p-3 text-sm">
+            <input
+              type="checkbox"
+              name="packageLeadEngine"
+              defaultChecked={!editing}
+              className="mt-1"
+            />
+            <span>
+              <span className="font-medium">Lead Engine</span>
+              <span className="block text-xs text-muted-foreground">
+                Ads, landing page, tracking number, SMS follow-up, booked estimate workflow.
+              </span>
+            </span>
+          </label>
+          <label className="flex items-start gap-2 rounded-md border bg-card p-3 text-sm">
+            <input type="checkbox" name="packageGoogleAds" defaultChecked={!editing} className="mt-1" />
+            <span>
+              <span className="font-medium">Google Ads management</span>
+              <span className="block text-xs text-muted-foreground">
+                Manager account access, conversion tracking, spend reporting.
+              </span>
+            </span>
+          </label>
+          <label className="flex items-start gap-2 rounded-md border bg-card p-3 text-sm">
+            <input type="checkbox" name="packageWebsite" className="mt-1" />
+            <span>
+              <span className="font-medium">Website / landing page</span>
+              <span className="block text-xs text-muted-foreground">
+                New website, landing page rebuild, domain/DNS coordination.
+              </span>
+            </span>
+          </label>
+          <label className="flex items-start gap-2 rounded-md border bg-card p-3 text-sm">
+            <input type="checkbox" name="packageSeo" className="mt-1" />
+            <span>
+              <span className="font-medium">Local SEO</span>
+              <span className="block text-xs text-muted-foreground">
+                Service pages, technical SEO, Search Console, local reporting.
+              </span>
+            </span>
+          </label>
+          <label className="flex items-start gap-2 rounded-md border bg-card p-3 text-sm">
+            <input type="checkbox" name="packageGbp" className="mt-1" />
+            <span>
+              <span className="font-medium">Google Business Profile</span>
+              <span className="block text-xs text-muted-foreground">
+                GBP access, services, posts, photos, review request workflow.
+              </span>
+            </span>
+          </label>
+        </div>
+        <div>
+          <Label htmlFor="initialServices">Contractor services offered</Label>
+          <Textarea
+            id="initialServices"
+            name="initialServices"
+            rows={3}
+            placeholder="Concrete driveway, patio, walkway, garage pad..."
+          />
+          <p className="mt-1 text-xs text-muted-foreground">
+            Add one per line or comma-separated. These seed the customer&apos;s service list.
+          </p>
+        </div>
+      </section>
+
+      <section className="space-y-4">
         <h3 className="text-sm font-medium text-muted-foreground">Billing</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div>
+            <Label htmlFor="payPerAppointment">Booked appointment billing</Label>
+            <Select
+              name="payPerAppointment"
+              defaultValue={editing ? (Number(customer?.appointmentFee ?? "0") > 0 ? "yes" : "no") : "yes"}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="yes">Retainer + booked appointment fee</SelectItem>
+                <SelectItem value="no">Retainer only / no appointment fee</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="mt-1 text-xs text-muted-foreground">
+              If set to no, the appointment fee is saved as $0 and billing stays retainer-only.
+            </p>
+          </div>
           <div>
             <Label htmlFor="setupFee">Setup fee</Label>
             <Input

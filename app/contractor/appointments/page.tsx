@@ -4,7 +4,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { CalendarCheck } from "lucide-react";
 import { AppointmentCard } from "@/components/contractor/appointment-card";
 
-export const metadata = { title: "Appointments — TLM Portal" };
+export const metadata = { title: "Appointments - TLM Portal" };
 
 export default async function ContractorAppointmentsPage() {
   const ctx = await requireContractor();

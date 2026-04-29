@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAdmin, requireAuth } from "@/lib/auth-guard";
+import { ForbiddenError, requireAdmin } from "@/lib/auth-guard";
 import { disputeCreateSchema, disputeReviewSchema } from "@/schemas/dispute";
 import { fileDispute, reviewDispute, DisputeWindowError } from "@/server/services/disputes";
 
@@ -17,7 +17,7 @@ export async function fileDisputeAction(
   _prev: ActionResult | undefined,
   formData: FormData,
 ): Promise<ActionResult> {
-  const ctx = await requireAuth();
+  const ctx = await requireAdmin();
   const parsed = disputeCreateSchema.safeParse(fd(formData));
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
@@ -26,6 +26,9 @@ export async function fileDisputeAction(
     await fileDispute(ctx, parsed.data);
   } catch (err) {
     if (err instanceof DisputeWindowError) {
+      return { ok: false, error: err.message };
+    }
+    if (err instanceof ForbiddenError) {
       return { ok: false, error: err.message };
     }
     throw err;

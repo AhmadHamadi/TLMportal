@@ -8,6 +8,8 @@ import {
 } from "./shared";
 import { passwordPolicy } from "./account";
 
+const checkboxBool = z.preprocess((value) => value === "on" || value === "true", z.boolean());
+
 export const customerCreateSchema = z.object({
   businessName: z.string().min(2, "Business name required"),
   contactName: z.string().min(2, "Contact name required"),
@@ -19,6 +21,13 @@ export const customerCreateSchema = z.object({
   industry: optionalString,
   googleAdsCustomerId: optionalString,
   twilioMessagingServiceSid: optionalString,
+  initialServices: optionalString,
+  payPerAppointment: z.enum(["yes", "no"]).default("yes"),
+  packageLeadEngine: checkboxBool.default(false),
+  packageWebsite: checkboxBool.default(false),
+  packageSeo: checkboxBool.default(false),
+  packageGbp: checkboxBool.default(false),
+  packageGoogleAds: checkboxBool.default(false),
   setupFee: moneyAmount.default("0"),
   monthlyRetainer: moneyAmount.default("0"),
   appointmentFee: moneyAmount.default("0"),

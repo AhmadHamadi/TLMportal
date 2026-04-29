@@ -16,7 +16,16 @@ export async function listAppointments(ctx: AuthCtx) {
     where: tenant,
     orderBy: { createdAt: "desc" },
     include: {
-      lead: { select: { id: true, firstName: true, lastName: true, phone: true, serviceRequested: true } },
+      lead: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          phone: true,
+          serviceRequested: true,
+          status: true,
+        },
+      },
       customer: { select: { id: true, businessName: true } },
     },
   });
@@ -114,7 +123,7 @@ export async function decideAppointment(ctx: AuthCtx, input: AppointmentDecision
         data: {
           leadId: appt.leadId,
           type: "CONTRACTOR_ACCEPTED",
-          description: input.note ? `Accepted — ${input.note}` : "Contractor accepted",
+          description: input.note ? `Accepted - ${input.note}` : "Contractor accepted",
           createdByUserId: ctx.userId,
         },
       });
@@ -151,7 +160,7 @@ export async function decideAppointment(ctx: AuthCtx, input: AppointmentDecision
       data: {
         leadId: appt.leadId,
         type: "CONTRACTOR_DECLINED",
-        description: input.note ? `Declined — ${input.note}` : "Contractor declined",
+        description: input.note ? `Declined - ${input.note}` : "Contractor declined",
         createdByUserId: ctx.userId,
       },
     });

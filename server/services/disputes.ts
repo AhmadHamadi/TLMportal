@@ -26,6 +26,9 @@ export async function listDisputes(ctx: AuthCtx) {
 }
 
 export async function fileDispute(ctx: AuthCtx, input: DisputeCreateInput) {
+  if (ctx.role !== "ADMIN") {
+    throw new ForbiddenError("Contact TLM to request a lead quality review.");
+  }
   return db.$transaction(async (tx) => {
     const appt = await tx.appointment.findUnique({
       where: { id: input.appointmentId },

@@ -32,6 +32,53 @@ async function uniqueSlug(base: string): Promise<string> {
   throw new Error("Could not generate unique slug");
 }
 
+function parseInitialServices(value?: string | null): string[] {
+  return Array.from(
+    new Set(
+      (value ?? "")
+        .split(/\r?\n|,/)
+        .map((service) => service.trim())
+        .filter((service) => service.length >= 2),
+    ),
+  ).slice(0, 30);
+}
+
+function selectedPackageLabels(input: {
+  packageLeadEngine?: boolean;
+  packageWebsite?: boolean;
+  packageSeo?: boolean;
+  packageGbp?: boolean;
+  packageGoogleAds?: boolean;
+}): string[] {
+  return [
+    input.packageLeadEngine ? "Lead Engine" : null,
+    input.packageGoogleAds ? "Google Ads management" : null,
+    input.packageWebsite ? "Website/landing page" : null,
+    input.packageSeo ? "Local SEO" : null,
+    input.packageGbp ? "Google Business Profile" : null,
+  ].filter(Boolean) as string[];
+}
+
+function buildBusinessModelNote(input: {
+  notes?: string | null;
+  payPerAppointment?: "yes" | "no";
+  appointmentFee?: string | number | Prisma.Decimal;
+  packageLeadEngine?: boolean;
+  packageWebsite?: boolean;
+  packageSeo?: boolean;
+  packageGbp?: boolean;
+  packageGoogleAds?: boolean;
+}) {
+  const packages = selectedPackageLabels(input);
+  const model =
+    input.payPerAppointment === "no"
+      ? "Billing model: retainer only; no per-booked-appointment fee."
+      : `Billing model: retainer plus booked appointment fee (${input.appointmentFee ?? "0"}).`;
+  const packageLine =
+    packages.length > 0 ? `Included services: ${packages.join(", ")}.` : null;
+  return [input.notes?.trim() || null, model, packageLine].filter(Boolean).join("\n");
+}
+
 export async function listCustomers(ctx: AuthCtx) {
   if (ctx.role !== "ADMIN") throw new ForbiddenError();
   return db.customer.findMany({
@@ -73,6 +120,9 @@ export async function getCustomerBySlug(ctx: AuthCtx, slug: string) {
 export async function createCustomer(ctx: AuthCtx, input: CustomerCreateInput) {
   if (ctx.role !== "ADMIN") throw new ForbiddenError();
   const slug = await uniqueSlug(slugify(input.businessName));
+  const initialServices = parseInitialServices(input.initialServices);
+  const appointmentFee = input.payPerAppointment === "no" ? "0" : input.appointmentFee;
+  const notes = buildBusinessModelNote({ ...input, appointmentFee });
   return db.$transaction(async (tx) => {
     const customer = await tx.customer.create({
       data: {
@@ -89,14 +139,20 @@ export async function createCustomer(ctx: AuthCtx, input: CustomerCreateInput) {
         twilioMessagingServiceSid: input.twilioMessagingServiceSid,
         setupFee: input.setupFee,
         monthlyRetainer: input.monthlyRetainer,
-        appointmentFee: input.appointmentFee,
+        appointmentFee,
         monthlyAdBudget: input.monthlyAdBudget,
         minProjectSize: input.minProjectSize,
         disputeWindowHours: input.disputeWindowHours,
         status: input.status,
-        notes: input.notes,
+        notes,
       },
     });
+    if (initialServices.length > 0) {
+      await tx.service.createMany({
+        data: initialServices.map((name) => ({ customerId: customer.id, name })),
+        skipDuplicates: true,
+      });
+    }
     await writeAudit(
       {
         userId: ctx.userId,
@@ -114,14 +170,55 @@ export async function createCustomer(ctx: AuthCtx, input: CustomerCreateInput) {
 
 export async function updateCustomer(ctx: AuthCtx, input: CustomerUpdateInput) {
   if (ctx.role !== "ADMIN") throw new ForbiddenError();
-  const { id, ...rest } = input;
+  const {
+    id,
+    initialServices,
+    payPerAppointment,
+    packageLeadEngine,
+    packageWebsite,
+    packageSeo,
+    packageGbp,
+    packageGoogleAds,
+    ...rest
+  } = input;
+  const servicesToAdd = parseInitialServices(initialServices);
+  const nextAppointmentFee = payPerAppointment === "no" ? "0" : rest.appointmentFee;
+  const nextNotes =
+    payPerAppointment ||
+    packageLeadEngine ||
+    packageWebsite ||
+    packageSeo ||
+    packageGbp ||
+    packageGoogleAds
+      ? buildBusinessModelNote({
+          notes: rest.notes,
+          payPerAppointment,
+          appointmentFee: nextAppointmentFee,
+          packageLeadEngine,
+          packageWebsite,
+          packageSeo,
+          packageGbp,
+          packageGoogleAds,
+        })
+      : rest.notes;
+  const data = {
+    ...rest,
+    ...(nextAppointmentFee !== undefined ? { appointmentFee: nextAppointmentFee } : {}),
+    ...(nextNotes !== undefined ? { notes: nextNotes } : {}),
+  };
   return db.$transaction(async (tx) => {
     const before = await tx.customer.findUnique({ where: { id } });
     if (!before || before.deletedAt) throw new Error("Customer not found");
     const customer = await tx.customer.update({
       where: { id },
-      data: rest as Prisma.CustomerUpdateInput,
+      data: data as Prisma.CustomerUpdateInput,
     });
+    if (servicesToAdd.length > 0) {
+      await tx.service.createMany({
+        data: servicesToAdd.map((name) => ({ customerId: id, name })),
+        skipDuplicates: true,
+      });
+    }
     await writeAudit(
       {
         userId: ctx.userId,

@@ -6,6 +6,10 @@ import { Phone, ChevronRight, Check, X } from "lucide-react";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { formatNational } from "@/lib/phone";
 import { formatDateTime } from "@/lib/dates";
+import {
+  canRevealLeadContactToContractor,
+  contractorLeadVisibilityMessage,
+} from "@/lib/lead-visibility";
 import { decideAppointmentAction } from "@/server/actions/appointments";
 import { toast } from "sonner";
 
@@ -21,6 +25,7 @@ type Appt = {
     lastName: string | null;
     phone: string | null;
     serviceRequested: string | null;
+    status: string;
   };
 };
 
@@ -29,6 +34,10 @@ export function AppointmentCard({ appt }: { appt: Appt }) {
   const name =
     [appt.lead.firstName, appt.lead.lastName].filter(Boolean).join(" ") || "Lead";
   const canDecide = ["REQUESTED", "SENT_TO_CONTRACTOR", "CONFIRMED"].includes(appt.status);
+  const canRevealContact = canRevealLeadContactToContractor({
+    status: appt.lead.status,
+    appointment: { status: appt.status },
+  });
 
   return (
     <article className="rounded-lg border bg-card p-4 shadow-sm">
@@ -41,7 +50,7 @@ export function AppointmentCard({ appt }: { appt: Appt }) {
             {name}
           </Link>
           <div className="mt-0.5 text-sm text-muted-foreground truncate">
-            {appt.lead.serviceRequested ?? "—"}
+            {appt.lead.serviceRequested ?? "-"}
           </div>
           <div className="text-xs text-muted-foreground mt-1">
             {appt.appointmentWindowStart
@@ -106,7 +115,7 @@ export function AppointmentCard({ appt }: { appt: Appt }) {
         </div>
       ) : null}
 
-      {appt.lead.phone ? (
+      {appt.lead.phone && canRevealContact ? (
         <a
           href={`tel:${appt.lead.phone}`}
           className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md border py-2.5 text-sm font-medium hover:bg-muted active:scale-[0.98] transition"
@@ -114,7 +123,14 @@ export function AppointmentCard({ appt }: { appt: Appt }) {
           <Phone className="h-4 w-4" />
           Call {formatNational(appt.lead.phone)}
         </a>
-      ) : null}
+      ) : (
+        <p className="mt-2 rounded-md border border-dashed bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+          {contractorLeadVisibilityMessage({
+            status: appt.lead.status,
+            appointment: { status: appt.status },
+          })}
+        </p>
+      )}
     </article>
   );
 }

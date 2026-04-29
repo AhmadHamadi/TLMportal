@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+﻿import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth-guard";
 import {
   Table,
@@ -13,7 +13,7 @@ import { Phone } from "lucide-react";
 import { formatDateTime } from "@/lib/dates";
 import { formatNational } from "@/lib/phone";
 
-export const metadata = { title: "Calls — Admin" };
+export const metadata = { title: "Calls - Admin" };
 
 export default async function AdminCallsPage() {
   await requireAdmin();
@@ -28,14 +28,14 @@ export default async function AdminCallsPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Calls</h1>
         <p className="text-sm text-muted-foreground">
-          Twilio call logs. Live integration ships in Phase 6.
+          Twilio call logs, forwarding outcomes, missed-call recovery, and call qualification review.
         </p>
       </div>
       {calls.length === 0 ? (
         <EmptyState
           icon={Phone}
           title="No calls logged yet"
-          description="Call logging starts when Twilio webhooks are wired in Phase 6."
+          description="Call logging starts when tracking numbers receive calls through Twilio."
         />
       ) : (
         <div className="rounded-md border bg-card">

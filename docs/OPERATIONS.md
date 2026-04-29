@@ -17,6 +17,7 @@ Target: under 30 minutes once provider accounts are ready.
 9. Build/publish the landing page using the prompt library at `/admin/prompts`.
 
 See `docs/CLIENT_ONBOARDING_ACCESS.md` for the account, Google Ads Manager, Google Business Profile, Search Console, domain/DNS, and review-request access playbook.
+See `docs/LEAD_VISIBILITY_BILLING_POLICY.md` for the contractor lead visibility and contact-reveal rules.
 
 ## B. New Lead Arrives
 
@@ -33,7 +34,7 @@ See `docs/CLIENT_ONBOARDING_ACCESS.md` for the account, Google Ads Manager, Goog
 
 - Admin or contractor via SMS `YES` marks the appointment `ACCEPTED`.
 - Accepted appointments become billable and start the dispute window: `now + customer.disputeWindowHours`.
-- Contractor can dispute inside the window via portal or SMS `BAD`.
+- Contractor can request a review by contacting TLM or replying `BAD` by SMS. This flags the lead for admin review; it does not automatically void billing.
 - Admin reviews disputes in `/admin/disputes`.
 - Approved dispute means the lead becomes not billable and any appointment fee is voided.
 - Rejected dispute means the lead remains billable.
