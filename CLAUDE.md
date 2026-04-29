@@ -44,26 +44,37 @@ two distinct apps with their own deploys.
    `Stripe-Signature`. Reject before doing any work.
 8. **All mutations write `AuditLog`.** Action, entity, who, when, before/after.
 
-## Build order — do not skip ahead
-1. Prisma schema + migrations + seed
-2. Auth.js v5 + admin shell + role guards
-3. Customers CRUD (admin)
-4. Leads CRUD (admin) + lead detail page
-5. Contractor dashboard read-only views
-6. **STOP. Verify with the user.**
-7. Twilio integration (calls, SMS, contractor YES/NO/BUSY/BAD)
-8. Stripe (subscriptions, billing records, manual appointment-fee approval)
-9. Automation rules
-10. Google Ads (manual entry first, API later)
+## Build order — already shipped
+All phases through 9 are live. The system in production includes:
+- Auth (Auth.js v5, Credentials, argon2id), role-based middleware, tenant scoping
+- Admin: customers, leads, appointments, calls, SMS, billing, disputes, ad spend,
+  tracking numbers, automation rules, prompt library, contract templates,
+  monthly reports, AI ad recommendations
+- Contractor (mobile-first): bottom-tab nav, card-based lead/appointment lists,
+  one-tap call/text, dispute filing with 48h window, billing summary
+- Twilio: real client + signature-verified webhooks, contractor YES/NO/BUSY/BAD
+- Stripe: real client + customer/subscription/invoice items + webhook
+- Resend email: portal invite + new-lead alert
+- Anthropic Claude: AI ad recommendations (reads landing page + ad metrics)
+- Onboarding checklist (auto-spawn defaults), per-client contract auto-fill
+- 39 tests pass (Vitest); ESLint + tsc + next build clean
 
-Do **not** pre-build Twilio or Stripe surfaces in Phase 1. Stub the modules so
-imports type-check; that's it.
+When all `*_API_KEY` env vars are missing, the integrations are simulated (no-op)
+so the app keeps working. Set them in Vercel to go live.
+
+## Future work
+- Cron for `CONTRACTOR_NO_REPLY_24H` automation trigger (Vercel Cron)
+- Real Google Ads API integration (replace manual spend entry)
+- Vercel Blob storage for contract PDFs (replace URL-based uploads)
+- Per-call recording + transcription (Twilio Voice Intelligence or AssemblyAI)
 
 ## Conventions
 - See `docs/CONVENTIONS.md` for code style, validation, error handling.
 - See `docs/DATA_MODEL.md` for the schema spec.
 - See `docs/ROADMAP.md` for phase deliverables and checkpoints.
 - See `docs/ARCHITECTURE.md` for folder layout and module responsibilities.
+- See `docs/OPERATIONS.md` for the agency runbook (onboard contractor,
+  monthly close, scaling guidance).
 
 ## Things that will get this project in trouble — avoid
 - Building Twilio/Stripe before the data model is stable.

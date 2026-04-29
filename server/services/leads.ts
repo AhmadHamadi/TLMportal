@@ -120,12 +120,16 @@ export async function createLead(ctx: AuthCtx, input: LeadCreateInput) {
     );
     return lead;
   }).then(async (lead) => {
-    // Fire automation rules outside the lead-creation transaction.
-    await dispatchAutomation({
-      trigger: "LEAD_CREATED",
-      customerId: lead.customerId,
-      leadId: lead.id,
-    }).catch(() => undefined);
+    // Fire automation rules + email/SMS notification outside the lead-creation transaction.
+    const { notifyContractorOfNewLead } = await import("./notifications");
+    await Promise.allSettled([
+      dispatchAutomation({
+        trigger: "LEAD_CREATED",
+        customerId: lead.customerId,
+        leadId: lead.id,
+      }),
+      notifyContractorOfNewLead({ leadId: lead.id, alsoSms: false }),
+    ]);
     return lead;
   });
 }

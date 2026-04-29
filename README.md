@@ -37,6 +37,7 @@ Next.js 16 App Router · TypeScript · Tailwind · shadcn/ui · Prisma 7 + Postg
 - [`docs/DATA_MODEL.md`](./docs/DATA_MODEL.md) — Prisma schema spec
 - [`docs/ROADMAP.md`](./docs/ROADMAP.md) — phased build with checkpoints
 - [`docs/CONVENTIONS.md`](./docs/CONVENTIONS.md) — code/auth/validation rules
+- [`docs/OPERATIONS.md`](./docs/OPERATIONS.md) — agency runbook (onboard a new contractor, monthly close, scaling)
 
 ## Phase status
 - [x] Phase 0 — bootstrap, deps, shadcn
@@ -51,6 +52,11 @@ Next.js 16 App Router · TypeScript · Tailwind · shadcn/ui · Prisma 7 + Postg
 - [x] Phase 9 — Google Ads spend manual entry
 - [x] Onboarding checklist + prompts (landing rebuild, full site, SEO, ads, GBP)
 - [x] Contracts per client (URL-based; Vercel Blob upload is a future swap)
+- [x] Master MSA + SOW templates with auto-fill (per-customer printable PDF)
+- [x] Prompt library (general + 12 niche-specific landing variants)
+- [x] Branded monthly performance reports (print-to-PDF)
+- [x] AI Google Ads recommendations (Claude Haiku reads landing page + metrics)
+- [x] Email notifications (Resend) — portal invite + new-lead alert
 
 ## Deploy on Vercel
 
@@ -67,6 +73,8 @@ Next.js 16 App Router · TypeScript · Tailwind · shadcn/ui · Prisma 7 + Postg
      `TWILIO_WEBHOOK_AUTH_TOKEN` (optional, falls back to AUTH_TOKEN)
    - `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
      `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
+   - `RESEND_API_KEY` + `RESEND_FROM_EMAIL` (optional — emails are simulated when missing)
+   - `ANTHROPIC_API_KEY` (optional — required for AI ad recommendations)
 4. Configure provider webhooks to point at your deployed URL:
    - **Twilio**: on each tracking number, set Voice URL and SMS URL to
      `https://<your-domain>/api/webhooks/twilio/voice` and `/sms`
