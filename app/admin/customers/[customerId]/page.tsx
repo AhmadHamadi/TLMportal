@@ -59,16 +59,40 @@ export default async function CustomerDetailPage({
             {customer.contactName} · {customer.email} · {formatNational(customer.phone)}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href={`/admin/onboarding/${customer.id}`}
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+          >
+            Onboarding
+          </Link>
+          <Link
+            href={`/admin/customers/${customer.id}/ad-recommendations`}
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+          >
+            AI ad recos
+          </Link>
+          <Link
+            href={`/admin/reports/${customer.id}/${new Date().toISOString().slice(0, 7)}`}
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+          >
+            Monthly report
+          </Link>
+          <Link
+            href={`/admin/customers/${customer.id}/contract/msa-v1`}
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+          >
+            Generate MSA
+          </Link>
           <Link
             href={`/admin/customers/${customer.id}/edit`}
-            className={buttonVariants({ variant: "outline" })}
+            className={buttonVariants({ variant: "outline", size: "sm" })}
           >
             Edit
           </Link>
           <form action={deleteCustomerAction}>
             <input type="hidden" name="id" value={customer.id} />
-            <Button type="submit" variant="destructive">
+            <Button type="submit" variant="destructive" size="sm">
               Archive
             </Button>
           </form>

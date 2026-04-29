@@ -36,7 +36,7 @@ export async function createCustomerAction(
   }
   const created = await createCustomer(ctx, parsed.data);
   revalidatePath("/admin/customers");
-  redirect(`/admin/customers/${created.id}`);
+  redirect(`/admin/onboarding/${created.id}`);
 }
 
 export async function updateCustomerAction(

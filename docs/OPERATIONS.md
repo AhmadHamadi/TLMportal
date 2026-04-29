@@ -4,10 +4,14 @@ Everything you (the agency owner) actually do from this dashboard, end-to-end.
 
 ## A. Onboard a new contractor (target: under 30 minutes)
 
-1. **Create the customer** — `Admin → Customers → New customer`. Fill business name, contact, **industry/niche**, contact phone, **forwarding phone** (the contractor's real phone), monthly retainer, appointment fee, monthly ad budget. Save.
-2. **Spawn the onboarding checklist** — open the customer, **Onboarding** tab, click **Spawn default checklist**. This creates pre-filled prompts for: landing page rebuild, full website rebuild, SEO setup, Google Ads campaigns, Google Business Profile, call tracking, conversion goals, brand assets, domain/DNS access. Each prompt is auto-filled with the customer's businessName, industry, forwardingPhone, monthlyAdBudget.
-3. **Provision a tracking number** — same customer page, **Tracking + SMS** tab. Enter area code + forwarding phone, click **Provision number**. With `TWILIO_*` env set, this purchases a Twilio number and points its voice + SMS webhooks at our app. Without Twilio creds, a placeholder number is recorded (simulated mode) — replace later.
-4. **Generate the contract** — header has **Generate MSA** → opens a printable, branded master service agreement with the customer's name, fees, and date already filled in. Print → Save as PDF → email to contractor.
+> Use the **Onboarding wizard** at `/admin/onboarding/[customerId]` — created
+> automatically when you save a new customer. It walks through every step
+> below as a single checklist with one-click actions and a progress bar.
+
+1. **Create the customer** — `Admin → Customers → New customer`. Fill business name, contact, **industry/niche**, contact phone, **forwarding phone** (the contractor's real phone), monthly retainer, appointment fee, monthly ad budget. Save → you land on the **Onboarding wizard**.
+2. **Spawn the onboarding checklist** — wizard step "Onboarding checklist" → **Spawn default checklist**. This creates pre-filled prompts for: landing page rebuild, full website rebuild, SEO setup, Google Ads campaigns, Google Business Profile, call tracking, conversion goals, brand assets, domain/DNS access. Each prompt is auto-filled with the customer's businessName, industry, forwardingPhone, monthlyAdBudget.
+3. **Provision a tracking number** — wizard step "Tracking number". Enter area code + forwarding phone, click **Provision number**. With `TWILIO_*` env set, this purchases a Twilio number and points its voice + SMS webhooks at our app. Without Twilio creds, a placeholder number is recorded (simulated mode) — replace later.
+4. **Generate the contract** — wizard step "Master Service Agreement" → opens a printable, branded MSA with the customer's name, fees, and date already filled in. Print → Save as PDF → email to contractor.
 5. **Invite the contractor user** — same customer page, **Users** tab. Invite with an initial password. (Optional: send portal invite email via Resend.)
 6. **Start the Stripe subscription** — Overview tab → **Start Stripe subscription**. Creates a Product + Price + Subscription on Stripe based on monthly retainer. (Requires `STRIPE_SECRET_KEY`.)
 7. **Set Google Ads + Twilio MS settings** — back to Edit. Paste the contractor's Google Ads Customer ID. If using a per-customer Twilio Messaging Service (recommended for A2P 10DLC isolation), paste the MS SID.
@@ -58,6 +62,23 @@ Everything you (the agency owner) actually do from this dashboard, end-to-end.
 - **Audit log**: every mutation writes a row in the same transaction. After 1M+ rows, plan to archive older than 12 months to cold storage.
 - **Rate limits**: Twilio's per-number throughput is the bottleneck for outbound SMS — provision per-customer Messaging Services so each contractor's brand has its own A2P 10DLC throughput cap.
 - **Indexes**: all tenant-scoped models have `(customerId, createdAt)` and the relevant `(customerId, status)` compound indexes. 81 indexes total across 23 tables.
+
+## G2. Vercel Cron jobs (already wired in `vercel.json`)
+
+| Path | Schedule | Purpose | Tier required |
+| --- | --- | --- | --- |
+| `/api/cron/weekly-digest` | `0 13 * * 1` (Mon 1pm UTC = 8am ET) | Send the weekly performance digest email to every active contractor | Vercel Pro (Hobby is daily only — change to `0 13 * * *` if on Hobby) |
+| `/api/cron/no-reply-check` | `0 * * * *` (hourly) | Find appointments sent to contractor >24h ago without a reply, fire `CONTRACTOR_NO_REPLY_24H` automation trigger | Vercel Pro |
+
+Both routes are protected by `Authorization: Bearer ${CRON_SECRET}`. Vercel
+sets and sends this automatically when you enable Cron in the dashboard. In
+dev (or with `CRON_SECRET` unset) the routes are open so you can hit them
+manually:
+
+```
+curl http://localhost:3000/api/cron/weekly-digest
+curl http://localhost:3000/api/cron/no-reply-check
+```
 
 ## H. Troubleshooting
 

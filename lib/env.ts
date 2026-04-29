@@ -27,6 +27,9 @@ const envSchema = z.object({
 
   // AI (Anthropic / Claude) — optional until configured
   ANTHROPIC_API_KEY: z.string().optional(),
+
+  // Cron auth — Vercel Cron sends Authorization: Bearer <CRON_SECRET>
+  CRON_SECRET: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
