@@ -2,6 +2,7 @@ import "server-only";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { writeAudit } from "./audit";
+import { dispatch as dispatchAutomation } from "./automation";
 import type { AuthCtx } from "@/lib/auth-guard";
 import { ForbiddenError, scopeToCustomer, withTenantWhere } from "@/lib/auth-guard";
 import type {
@@ -127,6 +128,14 @@ export async function decideAppointment(ctx: AuthCtx, input: AppointmentDecision
         },
         tx,
       );
+      // Dispatch automation outside the transaction
+      setTimeout(() => {
+        dispatchAutomation({
+          trigger: "APPOINTMENT_ACCEPTED",
+          customerId: appt.customerId,
+          leadId: appt.leadId,
+        }).catch(() => undefined);
+      }, 0);
       return updated;
     }
 
@@ -170,6 +179,11 @@ export async function adminConfirmAppointment(ctx: AuthCtx, id: string) {
     where: { id: appt.leadId },
     data: { status: "APPOINTMENT_CONFIRMED" },
   });
+  await dispatchAutomation({
+    trigger: "APPOINTMENT_CONFIRMED",
+    customerId: appt.customerId,
+    leadId: appt.leadId,
+  }).catch(() => undefined);
   return appt;
 }
 

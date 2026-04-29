@@ -7,6 +7,8 @@ import { formatNational } from "@/lib/phone";
 import { LeadStatusForm } from "./lead-status-form";
 import { LeadBillableForm } from "./lead-billable-form";
 import { AppointmentSection } from "./appointment-section";
+import { ManualSmsForm } from "./manual-sms-form";
+import { NotifyContractorForm } from "./notify-contractor-form";
 import type { Prisma } from "@prisma/client";
 
 type LeadWithRelations = Prisma.LeadGetPayload<{
@@ -89,7 +91,11 @@ export function LeadDetail({
           <CardContent className="space-y-3">
             <LeadStatusForm leadId={lead.id} viewerRole={viewerRole} />
             {viewerRole === "ADMIN" ? (
-              <LeadBillableForm leadId={lead.id} current={lead.billableStatus} />
+              <>
+                <LeadBillableForm leadId={lead.id} current={lead.billableStatus} />
+                <NotifyContractorForm leadId={lead.id} />
+                {lead.phone ? <ManualSmsForm leadId={lead.id} /> : null}
+              </>
             ) : null}
           </CardContent>
         </Card>

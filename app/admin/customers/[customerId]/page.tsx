@@ -19,6 +19,10 @@ import {
   deleteCustomerAction,
 } from "@/server/actions/customers";
 import { InviteUserForm } from "@/components/customers/invite-user-form";
+import { ProvisionTrackingNumberForm } from "@/components/customers/provision-tracking-number-form";
+import { releaseTrackingNumberAction } from "@/server/actions/tracking-numbers";
+import { StartSubscriptionButton } from "@/components/billing/stripe-customer-actions";
+import { db } from "@/lib/db";
 
 export default async function CustomerDetailPage({
   params,
@@ -29,6 +33,9 @@ export default async function CustomerDetailPage({
   const ctx = await requireAdmin();
   const customer = await getCustomerById(ctx, customerId);
   if (!customer) notFound();
+  const subscription = await db.stripeSubscription.findUnique({
+    where: { customerId: customer.id },
+  });
 
   return (
     <div className="space-y-6">
@@ -110,6 +117,29 @@ export default async function CustomerDetailPage({
               <CardContent className="text-sm whitespace-pre-wrap">{customer.notes}</CardContent>
             </Card>
           ) : null}
+          <Card>
+            <CardHeader><CardTitle className="text-sm">Stripe</CardTitle></CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              {subscription ? (
+                <>
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">Status:</span>
+                    <StatusBadge status={subscription.status.toUpperCase()} />
+                  </div>
+                  <div className="text-xs text-muted-foreground font-mono">
+                    {subscription.stripeSubscriptionId}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="text-muted-foreground">
+                    No Stripe subscription yet. Set the monthly retainer first, then start one.
+                  </p>
+                  <StartSubscriptionButton customerId={customer.id} />
+                </>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="services" className="space-y-3">
@@ -234,7 +264,7 @@ export default async function CustomerDetailPage({
           <InviteUserForm customerId={customer.id} />
         </TabsContent>
 
-        <TabsContent value="numbers" className="space-y-3">
+        <TabsContent value="numbers" className="space-y-4">
           <ul className="rounded-md border divide-y bg-card">
             {customer.trackingNumbers.map((tn) => (
               <li key={tn.id} className="flex items-center justify-between px-4 py-2">
@@ -245,15 +275,30 @@ export default async function CustomerDetailPage({
                     {tn.label ? ` · ${tn.label}` : ""}
                   </div>
                 </div>
-                <StatusBadge status={tn.status} />
+                <div className="flex items-center gap-2">
+                  <StatusBadge status={tn.status} />
+                  {tn.status === "ACTIVE" ? (
+                    <form action={releaseTrackingNumberAction}>
+                      <input type="hidden" name="id" value={tn.id} />
+                      <input type="hidden" name="customerId" value={customer.id} />
+                      <Button type="submit" variant="ghost" size="sm">Release</Button>
+                    </form>
+                  ) : null}
+                </div>
               </li>
             ))}
             {customer.trackingNumbers.length === 0 ? (
               <li className="px-4 py-3 text-sm text-muted-foreground">
-                No tracking numbers assigned. Twilio integration ships in Phase 6.
+                No tracking numbers assigned yet.
               </li>
             ) : null}
           </ul>
+          <Separator />
+          <h3 className="text-sm font-medium text-muted-foreground">Provision a tracking number</h3>
+          <ProvisionTrackingNumberForm
+            customerId={customer.id}
+            defaultForwardingPhoneNumber={customer.forwardingPhone}
+          />
         </TabsContent>
       </Tabs>
     </div>

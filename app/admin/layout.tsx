@@ -14,6 +14,7 @@ const NAV: NavItem[] = [
   { href: "/admin/disputes", label: "Disputes", iconKey: "disputes" },
   { href: "/admin/tracking-numbers", label: "Tracking numbers", iconKey: "numbers" },
   { href: "/admin/ad-spend", label: "Ad spend", iconKey: "spend" },
+  { href: "/admin/automation", label: "Automation", iconKey: "automation" },
   { href: "/admin/settings", label: "Settings", iconKey: "settings" },
 ];
 

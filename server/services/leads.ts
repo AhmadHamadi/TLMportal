@@ -2,6 +2,7 @@ import "server-only";
 import { Prisma, type LeadStatus } from "@prisma/client";
 import { db } from "@/lib/db";
 import { writeAudit } from "./audit";
+import { dispatch as dispatchAutomation } from "./automation";
 import type { AuthCtx } from "@/lib/auth-guard";
 import { ForbiddenError, scopeToCustomer, withTenantWhere } from "@/lib/auth-guard";
 import type {
@@ -117,6 +118,14 @@ export async function createLead(ctx: AuthCtx, input: LeadCreateInput) {
       },
       tx,
     );
+    return lead;
+  }).then(async (lead) => {
+    // Fire automation rules outside the lead-creation transaction.
+    await dispatchAutomation({
+      trigger: "LEAD_CREATED",
+      customerId: lead.customerId,
+      leadId: lead.id,
+    }).catch(() => undefined);
     return lead;
   });
 }

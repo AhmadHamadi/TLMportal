@@ -16,6 +16,7 @@ import {
   Hash,
   LineChart,
   Settings,
+  Zap,
 } from "lucide-react";
 
 const ICONS = {
@@ -30,6 +31,7 @@ const ICONS = {
   numbers: Hash,
   spend: LineChart,
   settings: Settings,
+  automation: Zap,
 } as const;
 
 export type IconKey = keyof typeof ICONS;

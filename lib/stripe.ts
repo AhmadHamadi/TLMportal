@@ -1,17 +1,39 @@
 import "server-only";
+import Stripe from "stripe";
+import { env } from "@/lib/env";
 
-// Phase 3 stub. Real Stripe client lands when subscriptions and invoice items
-// are wired. Imports of this module type-check today; calls throw.
+let _client: Stripe | null = null;
 
-export interface CreateSubscriptionArgs {
-  customerId: string;
-  monthlyRetainer: number;
+export function isStripeConfigured(): boolean {
+  return Boolean(env.STRIPE_SECRET_KEY);
 }
 
-export async function ensureStripeCustomer(_customerId: string): Promise<string> {
-  throw new Error("Stripe not yet wired (Phase 3)");
+export function getStripe(): Stripe {
+  if (!isStripeConfigured()) {
+    throw new Error("Stripe not configured (missing STRIPE_SECRET_KEY)");
+  }
+  if (!_client) {
+    _client = new Stripe(env.STRIPE_SECRET_KEY!, {
+      typescript: true,
+    });
+  }
+  return _client;
 }
 
-export async function createSubscription(_args: CreateSubscriptionArgs): Promise<{ subscriptionId: string }> {
-  throw new Error("Stripe not yet wired (Phase 3)");
+export function verifyStripeSignature(
+  payload: string,
+  signature: string | null,
+): Stripe.Event {
+  if (!isStripeConfigured()) {
+    throw new Error("Stripe not configured");
+  }
+  if (!signature) throw new Error("Missing stripe-signature header");
+  if (!env.STRIPE_WEBHOOK_SECRET) {
+    throw new Error("STRIPE_WEBHOOK_SECRET not set");
+  }
+  return getStripe().webhooks.constructEvent(
+    payload,
+    signature,
+    env.STRIPE_WEBHOOK_SECRET,
+  );
 }
