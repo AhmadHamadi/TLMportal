@@ -1,21 +1,71 @@
-import "server-only";
+﻿import "server-only";
+import nodemailer from "nodemailer";
 import { Resend } from "resend";
 import { env } from "@/lib/env";
 
-let _client: Resend | null = null;
+type EmailProvider = "resend" | "smtp" | "simulated";
 
-export function isEmailConfigured(): boolean {
+let resendClient: Resend | null = null;
+let smtpTransport: nodemailer.Transporter | null = null;
+
+export function getEmailProvider(): EmailProvider {
+  if (env.EMAIL_PROVIDER === "smtp") {
+    return isSmtpConfigured() ? "smtp" : "simulated";
+  }
+  if (env.EMAIL_PROVIDER === "resend") {
+    return isResendConfigured() ? "resend" : "simulated";
+  }
+  if (isResendConfigured()) return "resend";
+  if (isSmtpConfigured()) return "smtp";
+  return "simulated";
+}
+
+export function isResendConfigured(): boolean {
   return Boolean(env.RESEND_API_KEY && env.RESEND_FROM_EMAIL);
 }
 
-function getClient(): Resend {
-  if (!isEmailConfigured()) {
+export function isSmtpConfigured(): boolean {
+  return Boolean(
+    env.SMTP_HOST &&
+      env.SMTP_PORT &&
+      env.SMTP_USER &&
+      env.SMTP_PASSWORD &&
+      env.SMTP_FROM_EMAIL,
+  );
+}
+
+export function isEmailConfigured(): boolean {
+  return getEmailProvider() !== "simulated";
+}
+
+function getResendClient(): Resend {
+  if (!isResendConfigured()) {
     throw new Error("Resend not configured (RESEND_API_KEY + RESEND_FROM_EMAIL required)");
   }
-  if (!_client) {
-    _client = new Resend(env.RESEND_API_KEY!);
+  if (!resendClient) {
+    resendClient = new Resend(env.RESEND_API_KEY!);
   }
-  return _client;
+  return resendClient;
+}
+
+function getSmtpTransport(): nodemailer.Transporter {
+  if (!isSmtpConfigured()) {
+    throw new Error(
+      "SMTP not configured (SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM_EMAIL required)",
+    );
+  }
+  if (!smtpTransport) {
+    smtpTransport = nodemailer.createTransport({
+      host: env.SMTP_HOST!,
+      port: env.SMTP_PORT!,
+      secure: env.SMTP_SECURE ?? env.SMTP_PORT === 465,
+      auth: {
+        user: env.SMTP_USER!,
+        pass: env.SMTP_PASSWORD!,
+      },
+    });
+  }
+  return smtpTransport;
 }
 
 export interface SendEmailArgs {
@@ -28,17 +78,35 @@ export interface SendEmailArgs {
 export interface SendEmailResult {
   providerMessageId: string;
   simulated: boolean;
+  provider: EmailProvider;
 }
 
 export async function sendEmail(args: SendEmailArgs): Promise<SendEmailResult> {
-  if (!isEmailConfigured()) {
+  const provider = getEmailProvider();
+  if (provider === "simulated") {
     return {
       providerMessageId: `simulated_email_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       simulated: true,
+      provider,
     };
   }
-  const client = getClient();
-  const result = await client.emails.send({
+
+  if (provider === "smtp") {
+    const result = await getSmtpTransport().sendMail({
+      from: env.SMTP_FROM_EMAIL!,
+      to: args.to,
+      subject: args.subject,
+      html: args.html,
+      replyTo: args.replyTo,
+    });
+    return {
+      providerMessageId: result.messageId,
+      simulated: false,
+      provider,
+    };
+  }
+
+  const result = await getResendClient().emails.send({
     from: env.RESEND_FROM_EMAIL!,
     to: args.to,
     subject: args.subject,
@@ -51,5 +119,6 @@ export async function sendEmail(args: SendEmailArgs): Promise<SendEmailResult> {
   return {
     providerMessageId: result.data?.id ?? "unknown",
     simulated: false,
+    provider,
   };
 }

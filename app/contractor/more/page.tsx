@@ -1,9 +1,9 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { auth } from "@/auth";
 import { logoutAction } from "@/server/actions/auth";
 import { LayoutDashboard, ShieldAlert, Settings, LogOut } from "lucide-react";
 
-export const metadata = { title: "More — TLM Portal" };
+export const metadata = { title: "More - TLM Portal" };
 
 export default async function ContractorMorePage() {
   const session = await auth();
@@ -56,3 +56,4 @@ export default async function ContractorMorePage() {
     </div>
   );
 }
+

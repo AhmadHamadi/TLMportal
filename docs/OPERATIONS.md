@@ -1,89 +1,99 @@
-# Operations runbook
+# Operations Runbook
 
-Everything you (the agency owner) actually do from this dashboard, end-to-end.
+Everything the agency owner does from this dashboard, end to end.
 
-## A. Onboard a new contractor (target: under 30 minutes)
+## A. Onboard A New Contractor
 
-> Use the **Onboarding wizard** at `/admin/onboarding/[customerId]` — created
-> automatically when you save a new customer. It walks through every step
-> below as a single checklist with one-click actions and a progress bar.
+Target: under 30 minutes once provider accounts are ready.
 
-1. **Create the customer** — `Admin → Customers → New customer`. Fill business name, contact, **industry/niche**, contact phone, **forwarding phone** (the contractor's real phone), monthly retainer, appointment fee, monthly ad budget. Save → you land on the **Onboarding wizard**.
-2. **Spawn the onboarding checklist** — wizard step "Onboarding checklist" → **Spawn default checklist**. This creates pre-filled prompts for: landing page rebuild, full website rebuild, SEO setup, Google Ads campaigns, Google Business Profile, call tracking, conversion goals, brand assets, domain/DNS access. Each prompt is auto-filled with the customer's businessName, industry, forwardingPhone, monthlyAdBudget.
-3. **Provision a tracking number** — wizard step "Tracking number". Enter area code + forwarding phone, click **Provision number**. With `TWILIO_*` env set, this purchases a Twilio number and points its voice + SMS webhooks at our app. Without Twilio creds, a placeholder number is recorded (simulated mode) — replace later.
-4. **Generate the contract** — wizard step "Master Service Agreement" → opens a printable, branded MSA with the customer's name, fees, and date already filled in. Print → Save as PDF → email to contractor.
-5. **Invite the contractor user** — same customer page, **Users** tab. Invite with an initial password. (Optional: send portal invite email via Resend.)
-6. **Start the Stripe subscription** — Overview tab → **Start Stripe subscription**. Creates a Product + Price + Subscription on Stripe based on monthly retainer. (Requires `STRIPE_SECRET_KEY`.)
-7. **Set Google Ads + Twilio MS settings** — back to Edit. Paste the contractor's Google Ads Customer ID. If using a per-customer Twilio Messaging Service (recommended for A2P 10DLC isolation), paste the MS SID.
-8. **Done.** Build their landing page using the **Prompt library** at `/admin/prompts` (copy with one click). Push to Vercel.
+1. Create the customer at `Admin > Customers > New customer`. Fill business name, contact, industry/niche, contact phone, forwarding phone, fees, monthly ad budget, services, and service areas.
+2. Open the onboarding wizard at `/admin/onboarding/[customerId]`. It is created automatically after saving a new customer.
+3. Spawn the default checklist. This creates prompts/tasks for landing page, website, SEO, Google Ads, Google Business Profile, call tracking, conversion goals, brand assets, and domain/DNS access.
+4. Provision a Twilio tracking number. Enter area code and forwarding phone. With Twilio env vars set, this buys/configures a number; without them it records a simulated placeholder.
+5. Generate the Master Service Agreement. Print to PDF and email it to the contractor.
+6. Invite the contractor user from the customer Users tab. Send the portal invite email when email is configured.
+7. Start the Stripe subscription from the customer Overview tab. This creates the recurring retainer subscription.
+8. Paste Google Ads Customer ID and optional per-customer Twilio Messaging Service SID into customer settings.
+9. Build/publish the landing page using the prompt library at `/admin/prompts`.
 
-## B. New lead arrives
+See `docs/CLIENT_ONBOARDING_ACCESS.md` for the account, Google Ads Manager, Google Business Profile, Search Console, domain/DNS, and review-request access playbook.
 
-- A POST to `/api/leads` from the landing page form (or a Twilio inbound SMS, or a tracking phone call) creates a `Lead`.
-- Automation rules fire (LEAD_CREATED) — e.g. send a welcome SMS template.
-- A notification is created in the contractor's portal.
-- An email is sent to the contractor (Resend, if configured) with a deep link to the lead.
-- An SMS summary is sent to the contractor's forwarding phone if `Notify contractor` is invoked or a rule is configured for it.
-- Contractor sees the lead in `/contractor/leads` (mobile bottom-nav). They tap **Call** or **Text** for one-touch contact.
+## B. New Lead Arrives
 
-## C. Confirm an appointment + handle billing
+- A POST to `/api/leads` from the landing page form, a Twilio inbound SMS, or a tracking phone call creates a `Lead`.
+- Automation rules fire on `LEAD_CREATED`, and a portal notification/email is sent to the contractor.
+- For non-manual leads with a phone number, the portal automatically texts the lead asking for 1-2 availability options.
+- When the lead replies, the portal stores the reply as `preferredTime`, creates or updates the `Appointment`, and sends the contractor a proposed-time SMS.
+- Contractor replies by SMS: `YES` accepts and starts the billable dispute window; `BUSY` asks the lead for alternatives and notifies admin; `NO` declines; `BAD` opens a dispute.
+- If a tracking-number call is missed, busy, failed, or canceled, the portal sends an instant missed-call text-back and creates/attaches a phone-call lead.
+- Contractor still sees the lead in `/contractor/leads` with one-touch Call and Text actions.
+- Full details live in `docs/SMS_APPOINTMENT_WORKFLOW.md`.
 
-- Admin (or contractor via SMS YES) marks the appointment **ACCEPTED** → `isBillable = true`, `disputeWindowEndsAt = now + customer.disputeWindowHours`.
-- Contractor has 48 hours to dispute via portal (canned reasons + optional note) or via SMS BAD.
-- Admin reviews disputes in `/admin/disputes`. Approve → lead becomes NOT_BILLABLE, appointment fee voided. Reject → lead remains BILLABLE.
-- Admin clicks **Approve appointment fee** on the lead. A `BillingRecord` is created with status APPROVED.
-- If Stripe is configured: pushes the BillingRecord to a Stripe InvoiceItem. The next invoice will include it. Stripe webhook flips status to PAID.
+## C. Confirm Appointment And Handle Billing
 
-## D. Monthly close
+- Admin or contractor via SMS `YES` marks the appointment `ACCEPTED`.
+- Accepted appointments become billable and start the dispute window: `now + customer.disputeWindowHours`.
+- Contractor can dispute inside the window via portal or SMS `BAD`.
+- Admin reviews disputes in `/admin/disputes`.
+- Approved dispute means the lead becomes not billable and any appointment fee is voided.
+- Rejected dispute means the lead remains billable.
+- Admin approves appointment fees from the lead/billing flow.
+- If Stripe is configured, approved appointment fees are pushed to Stripe invoice items.
 
-- 1st of the month: open `/admin/reports` → click each customer → print the **Monthly performance report** to PDF → email it.
-- Optional: enable **Smart Retries** in your Stripe Dashboard so failed retainer payments retry automatically.
+## D. Monthly Close
 
-## E. AI ad recommendations
+- On the first business day of each month, open `/admin/reports` and review each customer.
+- Send the monthly performance report by email.
+- Review pending appointment fees and disputes before invoicing.
+- Keep Stripe Smart Retries enabled for failed retainer payments.
 
-- Open a customer → **AI ad recos**. Paste the landing page URL + last month's spend / impressions / clicks / conversions → click **Generate recommendations**.
-- Claude Haiku reads the landing page, takes the customer's services + service areas + min project size into account, and returns prioritised recommendations grouped by Keywords / Negative keywords / Ad copy / Landing page / Bidding / Targeting.
-- Use as a starting point for the next campaign optimisation pass.
+## E. AI Ad Recommendations
 
-## F. The contractor experience
+- Open a customer and use the AI ad recommendations screen.
+- Paste landing page URL plus spend, impressions, clicks, and conversions.
+- Claude returns recommendations grouped by keywords, negative keywords, ad copy, landing page, bidding, and targeting.
+- Treat these as a strategist's draft, not an automatic campaign change.
 
-- Mobile-first. Bottom tab bar: **Leads / Appts / Billing / More**.
-- Lead cards have **Call** (native dialer) and **Text** (native SMS) buttons.
-- Appointment cards have one-tap **Accept** / **Decline**.
-- Billing tab shows their retainer + appointment fee history.
-- Disputes tab shows their open dispute window (countdown) and lets them file a dispute with canned reasons.
+## F. Contractor Experience
 
-## G. Scaling considerations (for 100+ contractor customers)
+- Mobile-first bottom navigation: Leads, Appts, Billing, More.
+- Lead cards include Call and Text actions.
+- Appointment cards include Accept and Decline actions.
+- Billing tab shows retainer and appointment fee history.
+- Disputes tab shows dispute window countdown and lets the contractor file canned-reason disputes.
 
-- **Neon**: free tier has 191 compute hours and 0.5 GB. Plan to upgrade to Launch ($19/mo) at 10+ active contractors or first 500k leads.
-- **Connection pooling**: in Vercel, set `DATABASE_URL` to the **pooled** Neon URL for runtime. Keep the unpooled URL for migrations only (`prisma migrate deploy` from local or a separate `DIRECT_URL`).
-- **Webhook idempotency**: every webhook (Twilio CallSid, Twilio MessageSid, Stripe event id, Stripe InvoiceItem id) is uniquely indexed in our DB. Replays are safe.
-- **Automation evaluator**: fires after the lead-creation transaction. Failures in one rule don't break the rest.
-- **Audit log**: every mutation writes a row in the same transaction. After 1M+ rows, plan to archive older than 12 months to cold storage.
-- **Rate limits**: Twilio's per-number throughput is the bottleneck for outbound SMS — provision per-customer Messaging Services so each contractor's brand has its own A2P 10DLC throughput cap.
-- **Indexes**: all tenant-scoped models have `(customerId, createdAt)` and the relevant `(customerId, status)` compound indexes. 81 indexes total across 23 tables.
+## G. Scaling Considerations
 
-## G2. Vercel Cron jobs (already wired in `vercel.json`)
+- Neon: use the pooled URL for Vercel runtime. Use unpooled/direct URL only for migrations if needed.
+- Vercel: `vercel.json` runs migrations before build and configures cron routes.
+- Webhook idempotency: Twilio CallSid, Twilio MessageSid, Stripe event IDs, and Stripe invoice item IDs must remain unique or replay-safe.
+- Automation evaluator: runs after lead creation so one failed automation does not break lead intake.
+- Audit log: business mutations should write audit rows in the same transaction when practical.
+- SMS throughput: use per-customer Messaging Services and complete A2P 10DLC registration before production volume.
+- Indexes: tenant-scoped models should keep `customerId` plus status/date indexes for admin and contractor dashboards.
 
-| Path | Schedule | Purpose | Tier required |
+## H. Vercel Cron Jobs
+
+| Path | Schedule | Purpose | Tier |
 | --- | --- | --- | --- |
-| `/api/cron/weekly-digest` | `0 13 * * 1` (Mon 1pm UTC = 8am ET) | Send the weekly performance digest email to every active contractor | Vercel Pro (Hobby is daily only — change to `0 13 * * *` if on Hobby) |
-| `/api/cron/no-reply-check` | `0 * * * *` (hourly) | Find appointments sent to contractor >24h ago without a reply, fire `CONTRACTOR_NO_REPLY_24H` automation trigger | Vercel Pro |
+| `/api/cron/weekly-digest` | `0 13 * * 1` | Weekly performance digest email | Vercel Pro recommended |
+| `/api/cron/no-reply-check` | `0 14 * * *` | Contractor no-reply escalation after 24h | Hobby-compatible |
 
-Both routes are protected by `Authorization: Bearer ${CRON_SECRET}`. Vercel
-sets and sends this automatically when you enable Cron in the dashboard. In
-dev (or with `CRON_SECRET` unset) the routes are open so you can hit them
-manually:
+Both routes require `Authorization: Bearer ${CRON_SECRET}` in production. Missing `CRON_SECRET` must fail closed in production.
 
-```
+Local dev examples:
+
+```powershell
 curl http://localhost:3000/api/cron/weekly-digest
 curl http://localhost:3000/api/cron/no-reply-check
 ```
 
-## H. Troubleshooting
+## I. Troubleshooting
 
-- "Twilio not configured" — set `TWILIO_ACCOUNT_SID` + `TWILIO_AUTH_TOKEN` in `.env`. Provision actions still succeed in simulated mode.
-- "Stripe not configured" — set `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET`. Until set, billing operates DB-only (no real invoicing).
-- "ANTHROPIC_API_KEY not set" — AI ad recos page shows a banner. Set the key to enable.
-- Webhook 403 — signature verification failed. Make sure `TWILIO_WEBHOOK_AUTH_TOKEN` (or fallback to `TWILIO_AUTH_TOKEN`) and `STRIPE_WEBHOOK_SECRET` match the values configured in those providers.
-- Prisma "model not found" after schema changes — `pnpm prisma generate && pnpm dev` (Next dev caches the client in memory).
+- Twilio not configured: set `TWILIO_ACCOUNT_SID` and `TWILIO_AUTH_TOKEN`. Provisioning and SMS can run in simulated mode until then.
+- Stripe not configured: set `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`. Billing remains DB-only until then.
+- Email not configured: set either Resend env vars or SMTP env vars.
+- Outlook/GoDaddy email: use Microsoft 365 SMTP or Resend with DNS records on GoDaddy.
+- Anthropic not configured: set `ANTHROPIC_API_KEY` for AI recommendations.
+- Webhook 403: provider signature verification failed. Check the configured webhook URL and secret/token.
+- Prisma client stale after schema edits: run `pnpm prisma generate` and restart dev server.

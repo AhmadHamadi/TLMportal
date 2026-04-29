@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { writeAudit } from "./audit";
 import type { AuthCtx } from "@/lib/auth-guard";
-import { ForbiddenError, withTenantWhere } from "@/lib/auth-guard";
+import { ForbiddenError, scopeToCustomer, withTenantWhere } from "@/lib/auth-guard";
 import { billingMonthKey, startOfMonth } from "@/lib/dates";
 
 export type BillableEvaluation =
@@ -97,11 +97,14 @@ export async function listBillingRecords(ctx: AuthCtx) {
 }
 
 export async function monthlySummary(ctx: AuthCtx, customerId?: string) {
+  if (customerId) {
+    scopeToCustomer(ctx, customerId);
+  }
   const tenant = withTenantWhere(ctx);
   const month = billingMonthKey();
   const where: Prisma.BillingRecordWhereInput = {
-    ...tenant,
     ...(customerId ? { customerId } : {}),
+    ...tenant,
     billingMonth: month,
   };
   const grouped = await db.billingRecord.groupBy({

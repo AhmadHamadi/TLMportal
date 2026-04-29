@@ -15,11 +15,14 @@ import type {
 const PAGE_SIZE = 25;
 
 export async function listLeads(ctx: AuthCtx, filter: LeadFilterInput = { page: 1 }) {
+  if (filter.customerId) {
+    scopeToCustomer(ctx, filter.customerId);
+  }
   const tenant = withTenantWhere(ctx);
   const where: Prisma.LeadWhereInput = {
     deletedAt: null,
-    ...tenant,
     ...(filter.customerId ? { customerId: filter.customerId } : {}),
+    ...tenant,
     ...(filter.source ? { source: filter.source } : {}),
     ...(filter.status ? { status: filter.status } : {}),
     ...(filter.billableStatus ? { billableStatus: filter.billableStatus } : {}),
@@ -122,6 +125,9 @@ export async function createLead(ctx: AuthCtx, input: LeadCreateInput) {
   }).then(async (lead) => {
     // Fire automation rules + email/SMS notification outside the lead-creation transaction.
     const { notifyContractorOfNewLead } = await import("./notifications");
+    const { requestLeadAvailability } = await import("./sms");
+    const shouldAskAvailability =
+      Boolean(lead.phone) && lead.source !== "MANUAL_ADMIN_ENTRY" && !lead.preferredTime;
     await Promise.allSettled([
       dispatchAutomation({
         trigger: "LEAD_CREATED",
@@ -129,6 +135,9 @@ export async function createLead(ctx: AuthCtx, input: LeadCreateInput) {
         leadId: lead.id,
       }),
       notifyContractorOfNewLead({ leadId: lead.id, alsoSms: false }),
+      shouldAskAvailability
+        ? requestLeadAvailability({ leadId: lead.id })
+        : Promise.resolve({ sent: false, simulated: false }),
     ]);
     return lead;
   });

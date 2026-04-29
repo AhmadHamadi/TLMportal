@@ -6,6 +6,7 @@ import {
   optionalString,
   phoneE164,
 } from "./shared";
+import { passwordPolicy } from "./account";
 
 export const customerCreateSchema = z.object({
   businessName: z.string().min(2, "Business name required"),
@@ -65,7 +66,7 @@ export const customerUserInviteSchema = z.object({
   customerId: z.string().min(1),
   email: z.string().email().transform((s) => s.toLowerCase()),
   name: z.string().min(2),
-  password: z.string().min(8, "At least 8 characters"),
+  password: passwordPolicy,
   phone: optionalPhoneE164.optional(),
   emailConfirm: optionalEmail.optional(),
 });

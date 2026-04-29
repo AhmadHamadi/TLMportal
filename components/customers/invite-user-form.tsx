@@ -24,8 +24,11 @@ export function InviteUserForm({ customerId }: { customerId: string }) {
         <Input id="email" name="email" type="email" required />
       </div>
       <div>
-        <Label htmlFor="password">Initial password</Label>
-        <Input id="password" name="password" type="password" required minLength={8} />
+        <Label htmlFor="password">Temporary password</Label>
+        <Input id="password" name="password" type="password" required minLength={12} />
+        <p className="mt-1 text-xs text-muted-foreground">
+          Use 12+ characters with uppercase, lowercase, and a number. Ask the client to change it after first login.
+        </p>
       </div>
       {state && state.ok === false ? (
         <div className="md:col-span-3">

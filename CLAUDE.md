@@ -1,91 +1,105 @@
-# TLM Portal — Claude project instructions
+# TLM Portal - Project Instructions
 
-This file is the durable brief for Claude Code sessions on the TLM agency portal.
-Read this before doing anything in this directory.
+This is the durable brief for Claude/Codex sessions on the Trade Leads Marketing agency portal.
 
-## What this app is
-An agency operations dashboard for Trade Leads Marketing. Two roles:
-- **Admin** (agency owner) — full visibility across all contractor customers.
-- **Contractor** (customer) — sees only their own leads, calls, SMS, appointments, billing.
+## Product
+TLM Portal is an agency operations system for a contractor lead-engine service. It is not a generic CRM. It tracks customers, leads, calls, SMS, appointments, disputes, billing, ad spend, onboarding, contracts, reports, and integration health.
 
-The product is a lead tracking + appointment confirmation + contractor-facing
-dashboard + billing operations system. It is not a generic CRM.
+Roles:
+- Admin: agency owner/operator with access to all customers and operations.
+- Contractor: customer user who can access only assigned customer data.
 
 ## Stack
-- Next.js 15 App Router, TypeScript, Tailwind, shadcn/ui
-- Prisma + PostgreSQL (Neon, unless changed)
-- Auth.js v5 (NextAuth), Credentials provider, argon2id password hashing
-- Zod for env, forms, server-action input, webhook payloads
-- Stripe (Phase 3), Twilio (Phase 2) — stubs only until those phases
-- pnpm, Vercel deploy
+- Next.js 16 App Router, React 19, TypeScript, Tailwind 4, shadcn/ui.
+- Prisma 7 + PostgreSQL, with Neon recommended for hosting.
+- Auth.js v5 Credentials auth with argon2id password hashing.
+- Zod for env, forms, server actions, and webhook payloads.
+- Twilio for tracking numbers, call forwarding, inbound SMS, outbound SMS, and contractor YES/NO/BUSY/BAD replies.
+- Stripe for customers, subscriptions, invoice items, and payment webhooks.
+- Resend for portal invites and lead/digest emails.
+- Anthropic for optional AI Google Ads recommendations.
+- pnpm and Vercel.
 
-## Repo
-TLMportal lives at `C:\Users\ahmad\OneDrive\Desktop\WEBSITES\TLM\TLMportal`.
-It is a separate project from the marketing site at `TLM/` (Vite). Treat them as
-two distinct apps with their own deploys.
+## Architecture Rules
+1. Tenant boundary is `customerId`. Contractor access must be enforced server-side using `scopeToCustomer(ctx, customerId)` or `withTenantWhere(ctx)`. User-supplied filters must never override tenant scope.
+2. Server actions stay thin: auth -> parse with Zod -> call service -> revalidate/redirect. No business rules in actions.
+3. Services own business logic and Prisma access. They should be testable without React/request context.
+4. Components render and handle interaction only. Avoid Prisma access in components unless the query is trivial and already scoped.
+5. Money uses Prisma `Decimal`, never Float.
+6. Phone numbers are stored as E.164 and formatted only for display.
+7. `Customer` and `Lead` use soft delete via `deletedAt`.
+8. Twilio and Stripe webhooks must verify signatures before DB work.
+9. Cron routes must require `CRON_SECRET` in production.
+10. Mutations should write `AuditLog` rows in the same transaction where practical.
 
-## Architecture rules — read every session
-1. **Tenant boundary is `customerId`.** Every contractor-scope query MUST go
-   through `lib/auth-guard.ts#scopeToCustomer(session)`. Admins bypass.
-   Middleware enforces routing; auth-guard enforces data access.
-2. **Server action vs server service split.**
-   - Actions in `server/actions/*` are thin: parse input with Zod → check auth
-     → call a service → `revalidatePath`. No business rules in actions.
-   - Services in `server/services/*` are pure-ish business logic, return plain
-     data, take a `db` and a `scope` argument. Unit-testable.
-3. **No business logic in components.** Components render. Server components
-   fetch via services or read-only Prisma calls behind `auth-guard`.
-4. **Money is `Decimal`.** Never `Float`. Serialize to string at the API edge.
-5. **Phone numbers are E.164.** Normalize on write, never on display.
-6. **Soft-delete `Customer` and `Lead`.** `deletedAt: DateTime?`. All queries
-   filter `deletedAt: null` by default. Hard delete only via a dedicated admin
-   action with audit log.
-7. **Webhooks verify signatures.** Twilio `X-Twilio-Signature`, Stripe
-   `Stripe-Signature`. Reject before doing any work.
-8. **All mutations write `AuditLog`.** Action, entity, who, when, before/after.
+## Current Build Status
+Implemented areas:
+- Auth, proxy, admin shell, contractor shell.
+- Customers CRUD, services, service areas, contractor user invite.
+- Leads CRUD, lead detail, timelines, manual SMS, contractor notifications.
+- Appointments, accept/decline, billable state, dispute window.
+- Disputes, admin review, billing state changes.
+- Twilio voice and SMS webhooks, SMS parser, simulated mode when credentials are absent.
+- Stripe customer/subscription/invoice item actions and webhook handling.
+- Automation rules with allowlisted template variables.
+- Manual Google Ads spend, reports, onboarding checklist, contracts, prompt library, AI ad recommendations, Resend emails.
+- Tests for auth guard, leads isolation, appointments/disputes, billing evaluation, automation, SMS parser, phone handling.
 
-## Build order — already shipped
-All phases through 9 are live. The system in production includes:
-- Auth (Auth.js v5, Credentials, argon2id), role-based middleware, tenant scoping
-- Admin: customers, leads, appointments, calls, SMS, billing, disputes, ad spend,
-  tracking numbers, automation rules, prompt library, contract templates,
-  monthly reports, AI ad recommendations
-- Contractor (mobile-first): bottom-tab nav, card-based lead/appointment lists,
-  one-tap call/text, dispute filing with 48h window, billing summary
-- Twilio: real client + signature-verified webhooks, contractor YES/NO/BUSY/BAD
-- Stripe: real client + customer/subscription/invoice items + webhook
-- Resend email: portal invite + new-lead alert
-- Anthropic Claude: AI ad recommendations (reads landing page + ad metrics)
-- Onboarding checklist (auto-spawn defaults), per-client contract auto-fill
-- 39 tests pass (Vitest); ESLint + tsc + next build clean
+## Production Environment
+Required:
+- `DATABASE_URL`
+- `AUTH_SECRET`
+- `APP_URL`
+- `CRON_SECRET`
 
-When all `*_API_KEY` env vars are missing, the integrations are simulated (no-op)
-so the app keeps working. Set them in Vercel to go live.
+Provider-specific:
+- Twilio: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, optional `TWILIO_MESSAGING_SERVICE_SID`, optional `TWILIO_WEBHOOK_AUTH_TOKEN`.
+- Stripe: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`.
+- Email via Resend: `EMAIL_PROVIDER=resend`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL`.
+- Email via Outlook/Microsoft 365 SMTP: `EMAIL_PROVIDER=smtp`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM_EMAIL`.
+- AI: `ANTHROPIC_API_KEY`.
 
-## Future work
-- Cron for `CONTRACTOR_NO_REPLY_24H` automation trigger (Vercel Cron)
-- Real Google Ads API integration (replace manual spend entry)
-- Vercel Blob storage for contract PDFs (replace URL-based uploads)
-- Per-call recording + transcription (Twilio Voice Intelligence or AssemblyAI)
+Use Neon pooled URL for Vercel runtime and prefer `sslmode=verify-full`.
 
-## Conventions
-- See `docs/CONVENTIONS.md` for code style, validation, error handling.
-- See `docs/DATA_MODEL.md` for the schema spec.
-- See `docs/ROADMAP.md` for phase deliverables and checkpoints.
-- See `docs/ARCHITECTURE.md` for folder layout and module responsibilities.
-- See `docs/OPERATIONS.md` for the agency runbook (onboard contractor,
-  monthly close, scaling guidance).
+## Validation Commands
+Run after meaningful changes:
 
-## Things that will get this project in trouble — avoid
-- Building Twilio/Stripe before the data model is stable.
-- Putting business rules in components or actions instead of services.
-- Skipping the `customerId` scope on contractor queries.
-- Using `Float` for money.
-- Adding fields to Prisma without a migration.
-- Letting AI-drafted SMS promise prices, discounts, warranties, or specific
-  appointment times. Templates only, with admin-configured variables.
+```powershell
+pnpm test -- --run
+pnpm lint
+pnpm build
+```
 
-## When to ask vs proceed
-- Schema or auth changes that affect tenant isolation → ask.
-- New external integration (Twilio, Stripe, Google Ads) → ask.
-- Routine UI work, CRUD pages following the established patterns → proceed.
+For schema changes:
+
+```powershell
+pnpm prisma migrate dev --name <short_name>
+pnpm prisma generate
+pnpm db:seed
+```
+
+## Files to Read Before Major Changes
+- `AGENTS.md`
+- `docs/OPERATIONS.md`
+- `docs/ARCHITECTURE.md`
+- `docs/DATA_MODEL.md`
+- `docs/CONVENTIONS.md`
+- `prisma/schema.prisma`
+- `lib/auth-guard.ts`
+- `lib/env.ts`
+
+## SMS Appointment Workflow
+Read docs/SMS_APPOINTMENT_WORKFLOW.md before changing appointment SMS behavior. The intended loop is: lead availability request -> lead availability reply -> contractor YES/BUSY/NO/BAD -> confirmation or reschedule -> reminders. Keep this deterministic and fully logged before adding AI.
+
+## AI And MCP Opportunities
+Read docs/AI_MCP_OPPORTUNITIES.md before adding AI features, browser testing, MCP integrations, or new sellable service ideas. AI can summarize, recommend, and draft, but billing/dispute decisions stay deterministic and admin-reviewed.
+
+## Client Onboarding Access
+Read docs/CLIENT_ONBOARDING_ACCESS.md before changing contractor account setup, Google Ads, Google Business Profile, Search Console, domain/DNS, or review-request workflows.
+
+## Known Future Work
+- Real Google Ads API integration to replace manual spend entry.
+- Vercel Blob or other storage for uploaded/signed contracts.
+- Call recording and transcription, if legally approved and disclosed.
+- Stronger password reset/invite flow before production client rollout.
+- Optional Playwright smoke tests for admin and contractor dashboards.

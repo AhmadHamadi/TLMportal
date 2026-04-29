@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { verifyTwilioSignature, sendSms } from "@/lib/twilio";
 import { parseContractorReply } from "@/lib/sms-parser";
 import { SMS_TEMPLATES } from "@/lib/sms-templates";
+import { recordLeadAvailabilityReply } from "@/server/services/sms";
 
 export const runtime = "nodejs";
 
@@ -26,11 +27,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const from = params.From;
   const to = params.To;
   const body = params.Body ?? "";
+  if (!messageSid || !from || !to) return twiml();
 
   // Match by tracking number, then contractor forwarding number
   const tn = await db.trackingNumber.findUnique({
     where: { twilioPhoneNumber: to },
-    include: { customer: { select: { id: true, forwardingPhone: true } } },
+    include: { customer: { select: { id: true, businessName: true, forwardingPhone: true } } },
   });
 
   let customerId = tn?.customerId;
@@ -48,10 +50,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
   if (!customerId) return twiml();
 
-  // Idempotent log
-  await db.smsMessage.upsert({
+  // Twilio can retry webhooks. Return success for duplicates without repeating side effects.
+  const alreadyHandled = await db.smsMessage.findUnique({
     where: { providerMessageId: messageSid },
-    create: {
+    select: { id: true },
+  });
+  if (alreadyHandled) return twiml();
+
+  await db.smsMessage.create({
+    data: {
       providerMessageId: messageSid,
       customerId,
       fromNumber: from,
@@ -60,7 +67,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       direction: "INBOUND",
       status: "received",
     },
-    update: {},
   });
 
   if (isContractorReply) {
@@ -74,10 +80,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         orderBy: { createdAt: "desc" },
         include: {
           lead: true,
-          customer: { select: { disputeWindowHours: true } },
+          customer: { select: { businessName: true, disputeWindowHours: true } },
         },
       });
       if (recent) {
+        await db.smsMessage.update({
+          where: { providerMessageId: messageSid },
+          data: { leadId: recent.leadId },
+        });
         const now = new Date();
         if (reply === "YES") {
           await db.$transaction(async (tx) => {
@@ -105,11 +115,30 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
             });
           });
           if (recent.lead.phone) {
-            await sendSms({
+            const confirmation = await sendSms({
               to: recent.lead.phone,
-              body: SMS_TEMPLATES.leadConfirmation({
-                firstName: recent.lead.firstName ?? "there",
+              body: SMS_TEMPLATES.leadAppointmentConfirmed({
+                firstName: recent.lead.firstName,
+                businessName: recent.customer.businessName,
+                preferredTime: recent.lead.preferredTime,
               }),
+              from: tn?.twilioPhoneNumber,
+            });
+            await db.smsMessage.create({
+              data: {
+                customerId,
+                leadId: recent.leadId,
+                fromNumber: tn?.twilioPhoneNumber ?? "+system",
+                toNumber: recent.lead.phone,
+                body: SMS_TEMPLATES.leadAppointmentConfirmed({
+                  firstName: recent.lead.firstName,
+                  businessName: recent.customer.businessName,
+                  preferredTime: recent.lead.preferredTime,
+                }),
+                direction: "OUTBOUND",
+                providerMessageId: confirmation.providerMessageId,
+                status: confirmation.status,
+              },
             });
           }
         } else if (reply === "NO") {
@@ -147,6 +176,29 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
               link: `/admin/leads/${recent.leadId}`,
             },
           });
+          if (recent.lead.phone) {
+            const alternativeBody = SMS_TEMPLATES.leadAlternativeTimeNeeded({
+              firstName: recent.lead.firstName,
+              businessName: recent.customer.businessName,
+            });
+            const alternative = await sendSms({
+              to: recent.lead.phone,
+              body: alternativeBody,
+              from: tn?.twilioPhoneNumber,
+            });
+            await db.smsMessage.create({
+              data: {
+                customerId,
+                leadId: recent.leadId,
+                fromNumber: tn?.twilioPhoneNumber ?? "+system",
+                toNumber: recent.lead.phone,
+                body: alternativeBody,
+                direction: "OUTBOUND",
+                providerMessageId: alternative.providerMessageId,
+                status: alternative.status,
+              },
+            });
+          }
         } else if (reply === "BAD") {
           await db.$transaction(async (tx) => {
             await tx.dispute.create({
@@ -205,6 +257,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       type: "SMS_IN",
       description: body.length > 200 ? body.slice(0, 200) + "..." : body,
     },
+  });
+  await recordLeadAvailabilityReply({
+    customerId,
+    leadId: leadId!,
+    body,
   });
 
   return twiml();

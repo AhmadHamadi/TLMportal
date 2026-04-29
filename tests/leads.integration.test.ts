@@ -48,6 +48,19 @@ describe("leads service (integration vs Neon)", () => {
     await expect(getLead(ctx, someoneElsesLead!.id)).rejects.toBeInstanceOf(ForbiddenError);
   });
 
+  it("contractor cannot override tenant scope with a customer filter", async () => {
+    const { atlasUser } = await getSeededUsers();
+    const { atlas, northside } = await getSeededCustomers();
+    const ctx: AuthCtx = {
+      role: "CONTRACTOR",
+      userId: atlasUser.id,
+      customerIds: [atlas.id],
+    };
+    await expect(
+      listLeads(ctx, { customerId: northside.id, page: 1 }),
+    ).rejects.toBeInstanceOf(ForbiddenError);
+  });
+
   it("contractor with empty customerIds sees nothing", async () => {
     const ctx: AuthCtx = { role: "CONTRACTOR", userId: "x", customerIds: [] };
     const { items, total } = await listLeads(ctx, { page: 1 });

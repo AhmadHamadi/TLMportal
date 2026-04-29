@@ -24,6 +24,13 @@ const envSchema = z.object({
   // Email (Resend) — optional until configured
   RESEND_API_KEY: z.string().optional(),
   RESEND_FROM_EMAIL: z.string().optional(),
+  EMAIL_PROVIDER: z.enum(["resend", "smtp"]).optional(),
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().int().min(1).max(65535).optional(),
+  SMTP_SECURE: z.coerce.boolean().optional(),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASSWORD: z.string().optional(),
+  SMTP_FROM_EMAIL: z.string().optional(),
 
   // AI (Anthropic / Claude) — optional until configured
   ANTHROPIC_API_KEY: z.string().optional(),

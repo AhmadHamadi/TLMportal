@@ -1,37 +1,57 @@
-// SMS templates per the project spec. Variables are simple {{var}} replaced.
-// Never let AI-drafted content promise prices, discounts, warranties, or specific
-// appointment times. Templates only.
+// SMS templates for lead-to-contractor appointment coordination.
+// Keep these short, clear, and non-promissory. Do not promise exact arrival
+// times, prices, discounts, warranties, or guaranteed results.
+
+function clean(value: string | null | undefined, fallback: string): string {
+  const trimmed = value?.trim();
+  return trimmed && trimmed.length > 0 ? trimmed : fallback;
+}
 
 export const SMS_TEMPLATES = {
-  newLeadAck: ({
+  leadAvailabilityRequest({
     firstName,
     service,
+    businessName,
   }: {
-    firstName: string;
-    service: string;
-  }) =>
-    `Hi ${firstName}, thanks for requesting a quote for ${service}. What city or neighbourhood are you located in, and what days/times work best for a quick estimate?`,
+    firstName?: string | null;
+    service?: string | null;
+    businessName?: string | null;
+  }) {
+    const name = clean(firstName, "there");
+    const requestedService = clean(service, "your project");
+    const contractor = clean(businessName, "the contractor");
+    return `Hi ${name}, thanks for requesting an estimate for ${requestedService}. What day/time works best for ${contractor} to call or visit? Reply with 1-2 options.`;
+  },
 
-  askProjectDetails: () =>
-    `Thanks. Can you briefly describe the project? For example: driveway, patio, walkway, steps, concrete pad, interlock, or backyard work.`,
+  leadAvailabilityReceived({ firstName }: { firstName?: string | null }) {
+    return `Thanks ${clean(firstName, "there")}. We are checking that time with the contractor now and will confirm shortly.`;
+  },
 
-  askPhotos: () =>
-    `If you have photos of the area, you can send them here. That helps the contractor understand the project before the estimate.`,
+  askProjectDetails() {
+    return "Thanks. Can you briefly describe the project? For example: driveway, patio, walkway, steps, concrete pad, interlock, or backyard work.";
+  },
 
-  contractorSummary: ({
+  askPhotos() {
+    return "If you have photos of the area, you can send them here. That helps the contractor understand the project before the estimate.";
+  },
+
+  contractorProposedTime({
+    leadName,
     service,
     cityOrNeighbourhood,
     preferredTime,
     projectDetails,
   }: {
-    service: string;
-    cityOrNeighbourhood: string;
-    preferredTime: string;
-    projectDetails: string;
-  }) =>
-    `New estimate request for ${service} in ${cityOrNeighbourhood}. Preferred time: ${preferredTime}. Project notes: ${projectDetails}. Reply YES to accept, NO to decline, BUSY for another time, or BAD to dispute.`,
+    leadName?: string | null;
+    service?: string | null;
+    cityOrNeighbourhood?: string | null;
+    preferredTime?: string | null;
+    projectDetails?: string | null;
+  }) {
+    return `Estimate request: ${clean(leadName, "Lead")} wants ${clean(service, "a project")} in ${clean(cityOrNeighbourhood, "your area")}. Requested time: ${clean(preferredTime, "flexible")}. Notes: ${clean(projectDetails, "none")}. Reply YES if that works, BUSY with a better time, NO to decline, or BAD to dispute.`;
+  },
 
-  contractorAccepted: ({
+  contractorAccepted({
     leadName,
     leadPhone,
     leadAddressOrArea,
@@ -43,9 +63,39 @@ export const SMS_TEMPLATES = {
     leadAddressOrArea: string;
     preferredTime: string;
     projectDetails: string;
-  }) =>
-    `Confirmed. Lead details: ${leadName}, ${leadPhone}, ${leadAddressOrArea}, ${preferredTime}, ${projectDetails}.`,
+  }) {
+    return `Confirmed. Lead details: ${leadName}, ${leadPhone}, ${leadAddressOrArea}, requested time: ${preferredTime}. Notes: ${projectDetails}.`;
+  },
 
-  leadConfirmation: ({ firstName }: { firstName: string }) =>
-    `Thanks ${firstName}, your estimate request has been sent over. We'll follow up shortly to confirm the best time.`,
+  leadAppointmentConfirmed({
+    firstName,
+    businessName,
+    preferredTime,
+  }: {
+    firstName?: string | null;
+    businessName?: string | null;
+    preferredTime?: string | null;
+  }) {
+    return `Thanks ${clean(firstName, "there")}. ${clean(businessName, "The contractor")} confirmed your requested time: ${clean(preferredTime, "the time you provided")}. Please reply here if anything changes.`;
+  },
+
+  leadAlternativeTimeNeeded({
+    firstName,
+    businessName,
+  }: {
+    firstName?: string | null;
+    businessName?: string | null;
+  }) {
+    return `Thanks ${clean(firstName, "there")}. ${clean(businessName, "The contractor")} needs a different time. Please reply with another 1-2 options that work for you.`;
+  },
+
+  missedCallTextBack({
+    businessName,
+    service,
+  }: {
+    businessName?: string | null;
+    service?: string | null;
+  }) {
+    return `Sorry we missed your call to ${clean(businessName, "the contractor")}. What can we help with for ${clean(service, "your project")}? Reply with your project details and 1-2 good times for a callback.`;
+  },
 };
