@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { AppShell } from "@/components/shell/app-shell";
+import { ContractorShell } from "@/components/shell/contractor-shell";
 import type { NavItem } from "@/components/shell/sidebar";
 
 const NAV: NavItem[] = [
@@ -17,14 +17,13 @@ export default async function ContractorLayout({ children }: { children: React.R
   if (!session?.user || session.user.role !== "CONTRACTOR") redirect("/login");
 
   return (
-    <AppShell
+    <ContractorShell
       navItems={NAV}
       brand="TLM Portal"
       email={session.user.email}
       name={session.user.name}
-      role="CONTRACTOR"
     >
       {children}
-    </AppShell>
+    </ContractorShell>
   );
 }

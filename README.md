@@ -40,10 +40,39 @@ Next.js 16 App Router · TypeScript · Tailwind · shadcn/ui · Prisma 7 + Postg
 
 ## Phase status
 - [x] Phase 0 — bootstrap, deps, shadcn
-- [x] Phase 1 — Prisma schema + seed (run `pnpm db:migrate` once DATABASE_URL is set)
-- [ ] Phase 2 — Auth.js v5 + admin shell
-- [ ] Phase 3 — Customers CRUD
-- [ ] Phase 4 — Leads CRUD
-- [ ] Phase 5 — Contractor dashboard (read-only)
-- [ ] Phase 6 — Twilio
-- [ ] Phase 7 — Stripe
+- [x] Phase 1 — Prisma schema + seed
+- [x] Phase 2 — Auth.js v5 + admin shell
+- [x] Phase 3 — Customers CRUD (industry, MSSID, Google Ads CID)
+- [x] Phase 4 — Leads CRUD with timeline
+- [x] Phase 5 — Contractor dashboard (mobile-first, bottom nav, card cells)
+- [x] Phase 6 — Twilio (voice + SMS webhooks, contractor YES/NO/BUSY/BAD)
+- [x] Phase 7 — Stripe (subscriptions, invoice items)
+- [x] Phase 8 — Automation rules (allowlisted templates)
+- [x] Phase 9 — Google Ads spend manual entry
+- [x] Onboarding checklist + prompts (landing rebuild, full site, SEO, ads, GBP)
+- [x] Contracts per client (URL-based; Vercel Blob upload is a future swap)
+
+## Deploy on Vercel
+
+1. Push to GitHub (already pointed at https://github.com/AhmadHamadi/TLMportal).
+2. Import the repo into Vercel — `vercel.json` pins `framework: nextjs`,
+   region `iad1`, and a build command that runs `prisma generate` first.
+3. Set environment variables in the Vercel project settings:
+   - `DATABASE_URL` (Neon pooled URL is fine for runtime, but set
+     `DIRECT_URL` later if you switch migrations to use the unpooled URL)
+   - `AUTH_SECRET` — `openssl rand -base64 32`
+   - `APP_URL` — `https://your-domain.com`
+   - `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`,
+     `TWILIO_MESSAGING_SERVICE_SID` (optional, can override per-customer),
+     `TWILIO_WEBHOOK_AUTH_TOKEN` (optional, falls back to AUTH_TOKEN)
+   - `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
+     `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
+4. Configure provider webhooks to point at your deployed URL:
+   - **Twilio**: on each tracking number, set Voice URL and SMS URL to
+     `https://<your-domain>/api/webhooks/twilio/voice` and `/sms`
+   - **Stripe**: add a webhook endpoint at `https://<your-domain>/api/webhooks/stripe`
+     for events `customer.subscription.*`, `invoice.paid`,
+     `invoice.payment_succeeded`, `invoice.payment_failed`
+5. Run the migration once on Vercel's Neon connection:
+   `pnpm prisma migrate deploy` (Vercel does this on every deploy via the
+   `buildCommand` if you swap `prisma generate` for `prisma migrate deploy && prisma generate`).

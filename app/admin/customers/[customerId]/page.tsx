@@ -22,6 +22,8 @@ import { InviteUserForm } from "@/components/customers/invite-user-form";
 import { ProvisionTrackingNumberForm } from "@/components/customers/provision-tracking-number-form";
 import { releaseTrackingNumberAction } from "@/server/actions/tracking-numbers";
 import { StartSubscriptionButton } from "@/components/billing/stripe-customer-actions";
+import { ContractsTab } from "@/components/contracts/contracts-tab";
+import { OnboardingTab } from "@/components/onboarding/onboarding-tab";
 import { db } from "@/lib/db";
 
 export default async function CustomerDetailPage({
@@ -33,9 +35,17 @@ export default async function CustomerDetailPage({
   const ctx = await requireAdmin();
   const customer = await getCustomerById(ctx, customerId);
   if (!customer) notFound();
-  const subscription = await db.stripeSubscription.findUnique({
-    where: { customerId: customer.id },
-  });
+  const [subscription, contracts, onboardingItems] = await Promise.all([
+    db.stripeSubscription.findUnique({ where: { customerId: customer.id } }),
+    db.contract.findMany({
+      where: { customerId: customer.id },
+      orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+    }),
+    db.onboardingItem.findMany({
+      where: { customerId: customer.id },
+      orderBy: [{ status: "asc" }, { createdAt: "asc" }],
+    }),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -66,13 +76,23 @@ export default async function CustomerDetailPage({
       </div>
 
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList>
+        <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="onboarding">Onboarding</TabsTrigger>
+          <TabsTrigger value="contracts">Contracts</TabsTrigger>
           <TabsTrigger value="services">Services</TabsTrigger>
           <TabsTrigger value="areas">Service areas</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
-          <TabsTrigger value="numbers">Tracking numbers</TabsTrigger>
+          <TabsTrigger value="numbers">Tracking + SMS</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="onboarding">
+          <OnboardingTab customerId={customer.id} items={onboardingItems} />
+        </TabsContent>
+
+        <TabsContent value="contracts">
+          <ContractsTab customerId={customer.id} contracts={contracts} />
+        </TabsContent>
 
         <TabsContent value="overview" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -117,29 +137,69 @@ export default async function CustomerDetailPage({
               <CardContent className="text-sm whitespace-pre-wrap">{customer.notes}</CardContent>
             </Card>
           ) : null}
-          <Card>
-            <CardHeader><CardTitle className="text-sm">Stripe</CardTitle></CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              {subscription ? (
-                <>
-                  <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground">Status:</span>
-                    <StatusBadge status={subscription.status.toUpperCase()} />
-                  </div>
-                  <div className="text-xs text-muted-foreground font-mono">
-                    {subscription.stripeSubscriptionId}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <p className="text-muted-foreground">
-                    No Stripe subscription yet. Set the monthly retainer first, then start one.
-                  </p>
-                  <StartSubscriptionButton customerId={customer.id} />
-                </>
-              )}
-            </CardContent>
-          </Card>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader><CardTitle className="text-sm">Stripe</CardTitle></CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                {subscription ? (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">Status:</span>
+                      <StatusBadge status={subscription.status.toUpperCase()} />
+                    </div>
+                    <div className="text-xs text-muted-foreground font-mono break-all">
+                      {subscription.stripeSubscriptionId}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-muted-foreground">
+                      No Stripe subscription yet. Set the monthly retainer first, then start one.
+                    </p>
+                    <StartSubscriptionButton customerId={customer.id} />
+                  </>
+                )}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader><CardTitle className="text-sm">Google Ads link</CardTitle></CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">Status:</span>
+                  <StatusBadge status={customer.googleAdsLinkStatus} />
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  CID: <span className="font-mono">{customer.googleAdsCustomerId ?? "—"}</span>
+                </div>
+                <p className="text-xs text-muted-foreground pt-1">
+                  Real OAuth/MCC link request lands in Phase 9b. For now, set the CID and link
+                  status manually in Edit.
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader><CardTitle className="text-sm">Twilio Messaging Service</CardTitle></CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <div className="text-xs text-muted-foreground">
+                  MS SID:{" "}
+                  <span className="font-mono">{customer.twilioMessagingServiceSid ?? "(uses agency default)"}</span>
+                </div>
+                <p className="text-xs text-muted-foreground pt-1">
+                  Per-customer A2P 10DLC isolation: each contractor should have their own Brand
+                  + Campaign → Messaging Service. Set the SID in Edit once provisioned.
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader><CardTitle className="text-sm">Industry / niche</CardTitle></CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <div className="font-medium">{customer.industry ?? "—"}</div>
+                <p className="text-xs text-muted-foreground">
+                  Used in onboarding prompts (landing page rebuild brief, ad campaign structure).
+                </p>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="services" className="space-y-3">

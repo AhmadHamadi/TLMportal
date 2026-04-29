@@ -138,6 +138,52 @@ enum NotificationCategory {
   SYSTEM
 }
 
+enum GoogleAdsLinkStatus {
+  NOT_LINKED
+  INVITED
+  LINKED
+  TERMINATED
+}
+
+enum ContractStatus {
+  DRAFT
+  SENT
+  SIGNED
+  EXPIRED
+  TERMINATED
+}
+
+enum ContractType {
+  MASTER_SERVICE_AGREEMENT
+  SCOPE_LANDING_PAGE
+  SCOPE_FULL_WEBSITE
+  SCOPE_SEO
+  SCOPE_GOOGLE_ADS_MANAGEMENT
+  SCOPE_GBP_MANAGEMENT
+  PAYMENT_AUTHORIZATION
+  OTHER
+}
+
+enum OnboardingItemType {
+  LANDING_PAGE_REBUILD
+  FULL_WEBSITE_REBUILD
+  SEO_SETUP
+  GOOGLE_ADS_CAMPAIGNS
+  GOOGLE_BUSINESS_PROFILE
+  CALL_TRACKING_SETUP
+  CONVERSION_GOALS
+  BRAND_ASSETS
+  DOMAIN_DNS_ACCESS
+  OTHER
+}
+
+enum OnboardingItemStatus {
+  TODO
+  IN_PROGRESS
+  BLOCKED
+  DONE
+}
+
 // ============================================================
 // Auth + Tenancy
 // ============================================================
@@ -200,27 +246,30 @@ model VerificationToken {
 }
 
 model Customer {
-  id                  String         @id @default(cuid())
-  slug                String         @unique
-  businessName        String
-  contactName         String
-  email               String
-  phone               String
-  forwardingPhone     String
-  websiteUrl          String?
-  landingPageUrl      String?
-  googleAdsCustomerId String?
-  setupFee            Decimal        @default(0) @db.Decimal(10, 2)
-  monthlyRetainer     Decimal        @default(0) @db.Decimal(10, 2)
-  appointmentFee      Decimal        @default(0) @db.Decimal(10, 2)
-  monthlyAdBudget     Decimal        @default(0) @db.Decimal(10, 2)
-  minProjectSize      Decimal?       @db.Decimal(10, 2)
-  disputeWindowHours  Int            @default(48)
-  status              CustomerStatus @default(ACTIVE)
-  notes               String?        @db.Text
-  createdAt           DateTime       @default(now())
-  updatedAt           DateTime       @updatedAt
-  deletedAt           DateTime?
+  id                        String              @id @default(cuid())
+  slug                      String              @unique
+  businessName              String
+  contactName               String
+  email                     String
+  phone                     String
+  forwardingPhone           String
+  websiteUrl                String?
+  landingPageUrl            String?
+  industry                  String?
+  googleAdsCustomerId       String?
+  googleAdsLinkStatus       GoogleAdsLinkStatus @default(NOT_LINKED)
+  twilioMessagingServiceSid String?
+  setupFee                  Decimal             @default(0) @db.Decimal(10, 2)
+  monthlyRetainer           Decimal             @default(0) @db.Decimal(10, 2)
+  appointmentFee            Decimal             @default(0) @db.Decimal(10, 2)
+  monthlyAdBudget           Decimal             @default(0) @db.Decimal(10, 2)
+  minProjectSize            Decimal?            @db.Decimal(10, 2)
+  disputeWindowHours        Int                 @default(48)
+  status                    CustomerStatus      @default(ACTIVE)
+  notes                     String?             @db.Text
+  createdAt                 DateTime            @default(now())
+  updatedAt                 DateTime            @updatedAt
+  deletedAt                 DateTime?
 
   users              CustomerUser[]
   services           Service[]
@@ -237,8 +286,11 @@ model Customer {
   automationRules    AutomationRule[]
   notifications      Notification[]
   auditLogs          AuditLog[]
+  contracts          Contract[]
+  onboardingItems    OnboardingItem[]
 
   @@index([status, deletedAt])
+  @@index([industry])
 }
 
 model CustomerUser {
@@ -578,4 +630,52 @@ model AuditLog {
   @@index([entityType, entityId])
   @@index([userId, createdAt])
   @@index([customerId, createdAt])
+}
+
+// ============================================================
+// Contracts (URL-based for now; Vercel Blob later)
+// ============================================================
+
+model Contract {
+  id           String         @id @default(cuid())
+  customerId   String
+  type         ContractType   @default(OTHER)
+  name         String
+  fileUrl      String
+  status       ContractStatus @default(DRAFT)
+  signedAt     DateTime?
+  signerName   String?
+  signerEmail  String?
+  notes        String?        @db.Text
+  uploadedById String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, status])
+  @@index([customerId, type])
+}
+
+// ============================================================
+// Onboarding checklist + briefs (admin-only)
+// ============================================================
+
+model OnboardingItem {
+  id          String               @id @default(cuid())
+  customerId  String
+  type        OnboardingItemType
+  status      OnboardingItemStatus @default(TODO)
+  title       String
+  prompt      String?              @db.Text
+  notes       String?              @db.Text
+  dueDate     DateTime?
+  completedAt DateTime?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, status])
+  @@index([customerId, type])
 }

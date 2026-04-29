@@ -28,7 +28,9 @@ type Customer = {
   forwardingPhone?: string;
   websiteUrl?: string | null;
   landingPageUrl?: string | null;
+  industry?: string | null;
   googleAdsCustomerId?: string | null;
+  twilioMessagingServiceSid?: string | null;
   setupFee?: string;
   monthlyRetainer?: string;
   appointmentFee?: string;
@@ -98,8 +100,17 @@ export function CustomerForm({ customer }: { customer?: Customer }) {
       </section>
 
       <section className="space-y-4">
-        <h3 className="text-sm font-medium text-muted-foreground">Web</h3>
+        <h3 className="text-sm font-medium text-muted-foreground">Web + niche</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="industry">Industry / niche</Label>
+            <Input
+              id="industry"
+              name="industry"
+              defaultValue={customer?.industry ?? ""}
+              placeholder="Concrete contractor, Roofing, HVAC..."
+            />
+          </div>
           <div>
             <Label htmlFor="websiteUrl">Website URL</Label>
             <Input id="websiteUrl" name="websiteUrl" defaultValue={customer?.websiteUrl ?? ""} />
@@ -119,6 +130,15 @@ export function CustomerForm({ customer }: { customer?: Customer }) {
               name="googleAdsCustomerId"
               defaultValue={customer?.googleAdsCustomerId ?? ""}
               placeholder="123-456-7890"
+            />
+          </div>
+          <div>
+            <Label htmlFor="twilioMessagingServiceSid">Twilio Messaging Service SID</Label>
+            <Input
+              id="twilioMessagingServiceSid"
+              name="twilioMessagingServiceSid"
+              defaultValue={customer?.twilioMessagingServiceSid ?? ""}
+              placeholder="MGxxxxxxxxxx (per-customer override)"
             />
           </div>
         </div>
