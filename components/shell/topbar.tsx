@@ -26,11 +26,17 @@ export function Topbar({
         {role === "ADMIN" ? "Agency operations" : "Your dashboard"}
       </div>
       <div className="flex items-center gap-3">
-        <Badge variant={role === "ADMIN" ? "default" : "secondary"}>{role}</Badge>
+        <Badge
+          className={
+            role === "ADMIN"
+              ? "bg-[#F37021] text-white border-transparent hover:bg-[#D85A0F]"
+              : "bg-[#EAF1FE] text-[#143E96] border-transparent"
+          }
+        >
+          {role}
+        </Badge>
         <DropdownMenu>
-          <DropdownMenuTrigger
-            className="inline-flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm font-medium hover:bg-accent"
-          >
+          <DropdownMenuTrigger className="inline-flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm font-medium hover:bg-accent">
             <User className="h-4 w-4" />
             <span className="hidden md:inline">{name ?? email}</span>
           </DropdownMenuTrigger>
