@@ -51,7 +51,7 @@ The final spread must keep the tenant scope authoritative, and direct record rea
 - Stripe webhook syncs subscriptions and paid/failed invoices.
 - Resend sends invite, lead alert, and digest emails; templates escape HTML.
 - Anthropic powers AI ad recommendations when `ANTHROPIC_API_KEY` is set.
-- Cron endpoints run weekly digest and daily no-reply checks; `CRON_SECRET` is required in production.
+- Cron endpoints run weekly digest, daily no-reply checks, and monthly Google Ads budget confirmation SMS; `CRON_SECRET` is required in production.
 
 ## Deployment
 `vercel.json` runs:

@@ -23,7 +23,7 @@ import {
   BookOpen,
 } from "lucide-react";
 
-const ICONS = {
+export const ICONS = {
   overview: LayoutDashboard,
   customers: Users,
   leads: Inbox,

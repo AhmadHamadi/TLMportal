@@ -30,6 +30,7 @@ const opsLinks: { href: string; label: string; description: string; icon: Lucide
   { href: "/admin/calls", label: "Call tracking", description: "Audit call status, missed calls, and text-back recovery.", icon: Phone },
   { href: "/admin/sms", label: "SMS inbox", description: "Monitor lead availability, contractor replies, and follow-up.", icon: MessageSquare },
   { href: "/admin/appointments", label: "Booked appointments", description: "See requested, accepted, and confirmed estimate appointments.", icon: CalendarCheck },
+  { href: "/admin/disputes", label: "Internal reviews", description: "Review spam, wrong-number, bad-fit, or billing-credit concerns.", icon: ClipboardCheck },
   { href: "/admin/customers", label: "Customer onboarding", description: "Services, areas, contracts, Google access, tracking numbers.", icon: Users },
   { href: "/admin/tracking-numbers", label: "Tracking numbers", description: "Provision Twilio numbers and verify forwarding.", icon: Hash },
   { href: "/admin/reports", label: "Reports", description: "Show clients leads, calls, booked appointments, spend, and ROI.", icon: LineChart },

@@ -22,7 +22,14 @@ export function AppShell({
     <div className="flex min-h-svh">
       <Sidebar items={navItems} groups={navGroups} brand={brand} />
       <div className="flex flex-1 flex-col">
-        <Topbar email={email} name={name} role={role} />
+        <Topbar
+          email={email}
+          name={name}
+          role={role}
+          navItems={navItems}
+          navGroups={navGroups}
+          brand={brand}
+        />
         <main className="flex-1 overflow-x-auto p-4 md:p-6 bg-background">{children}</main>
       </div>
     </div>

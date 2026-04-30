@@ -57,11 +57,13 @@ See `docs/LEAD_VISIBILITY_BILLING_POLICY.md` for the contractor lead visibility 
 
 ## F. Contractor Experience
 
-- Mobile-first bottom navigation: Leads, Appts, Billing, More.
-- Lead cards include Call and Text actions.
-- Appointment cards include Accept and Decline actions.
-- Billing tab shows retainer and appointment fee history.
-- Internal reviews tab shows internal review window countdown and lets the contractor file canned-reason internal reviews.
+- Mobile-first navigation: Home, Calendar, Calls, SMS, Settings.
+- Home shows total leads, booked appointments, booking rate, recent calls, SMS outcomes, and Google Ads budget requests.
+- Calendar shows confirmed booked appointments.
+- Call log shows tracking-number calls that forwarded to the contractor phone.
+- SMS summary shows lead conversations and whether each became a booked appointment.
+- Settings lets the contractor change their password.
+- Contractor billing/dispute screens stay hidden; TLM handles billing and internal reviews from the admin portal.
 
 ## G. Scaling Considerations
 
