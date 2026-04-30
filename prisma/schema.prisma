@@ -259,10 +259,17 @@ model Customer {
   googleAdsCustomerId       String?
   googleAdsLinkStatus       GoogleAdsLinkStatus @default(NOT_LINKED)
   twilioMessagingServiceSid String?
+  leadEngineEnabled         Boolean             @default(true)
+  googleAdsEnabled          Boolean             @default(false)
+  websiteEnabled            Boolean             @default(false)
+  localSeoEnabled           Boolean             @default(false)
+  gbpEnabled                Boolean             @default(false)
   setupFee                  Decimal             @default(0) @db.Decimal(10, 2)
   monthlyRetainer           Decimal             @default(0) @db.Decimal(10, 2)
   appointmentFee            Decimal             @default(0) @db.Decimal(10, 2)
+  seoGbpMonthlyRetainer     Decimal             @default(0) @db.Decimal(10, 2)
   monthlyAdBudget           Decimal             @default(0) @db.Decimal(10, 2)
+  googleAdsBudgetCurrency   String              @default("CAD")
   minProjectSize            Decimal?            @db.Decimal(10, 2)
   disputeWindowHours        Int                 @default(48)
   status                    CustomerStatus      @default(ACTIVE)

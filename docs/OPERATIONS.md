@@ -25,7 +25,7 @@ See `docs/LEAD_VISIBILITY_BILLING_POLICY.md` for the contractor lead visibility 
 - Automation rules fire on `LEAD_CREATED`, and a portal notification/email is sent to the contractor.
 - For non-manual leads with a phone number, the portal automatically texts the lead asking for 1-2 availability options.
 - When the lead replies, the portal stores the reply as `preferredTime`, creates or updates the `Appointment`, and sends the contractor a proposed-time SMS.
-- Contractor replies by SMS: `YES` accepts and starts the billable dispute window; `BUSY` asks the lead for alternatives and notifies admin; `NO` declines; `BAD` opens a dispute.
+- Contractor replies by SMS: `YES` accepts and starts the billable internal review window; `BUSY` asks the lead for alternatives and notifies admin; `NO` declines; `BAD` flags admin review.
 - If a tracking-number call is missed, busy, failed, or canceled, the portal sends an instant missed-call text-back and creates/attaches a phone-call lead.
 - Contractor still sees the lead in `/contractor/leads` with one-touch Call and Text actions.
 - Full details live in `docs/SMS_APPOINTMENT_WORKFLOW.md`.
@@ -33,11 +33,11 @@ See `docs/LEAD_VISIBILITY_BILLING_POLICY.md` for the contractor lead visibility 
 ## C. Confirm Appointment And Handle Billing
 
 - Admin or contractor via SMS `YES` marks the appointment `ACCEPTED`.
-- Accepted appointments become billable and start the dispute window: `now + customer.disputeWindowHours`.
+- Accepted appointments become booked appointments and start the internal review window: `now + customer.disputeWindowHours`.
 - Contractor can request a review by contacting TLM or replying `BAD` by SMS. This flags the lead for admin review; it does not automatically void billing.
-- Admin reviews disputes in `/admin/disputes`.
-- Approved dispute means the lead becomes not billable and any appointment fee is voided.
-- Rejected dispute means the lead remains billable.
+- Admin reviews internal reviews in `/admin/internal reviews`.
+- Approved internal review means any appointment fee is voided.
+- Rejected internal review means the booked appointment fee remains.
 - Admin approves appointment fees from the lead/billing flow.
 - If Stripe is configured, approved appointment fees are pushed to Stripe invoice items.
 
@@ -45,7 +45,7 @@ See `docs/LEAD_VISIBILITY_BILLING_POLICY.md` for the contractor lead visibility 
 
 - On the first business day of each month, open `/admin/reports` and review each customer.
 - Send the monthly performance report by email.
-- Review pending appointment fees and disputes before invoicing.
+- Review pending appointment fees and internal reviews before invoicing.
 - Keep Stripe Smart Retries enabled for failed retainer payments.
 
 ## E. AI Ad Recommendations
@@ -61,7 +61,7 @@ See `docs/LEAD_VISIBILITY_BILLING_POLICY.md` for the contractor lead visibility 
 - Lead cards include Call and Text actions.
 - Appointment cards include Accept and Decline actions.
 - Billing tab shows retainer and appointment fee history.
-- Disputes tab shows dispute window countdown and lets the contractor file canned-reason disputes.
+- Internal reviews tab shows internal review window countdown and lets the contractor file canned-reason internal reviews.
 
 ## G. Scaling Considerations
 
@@ -79,6 +79,7 @@ See `docs/LEAD_VISIBILITY_BILLING_POLICY.md` for the contractor lead visibility 
 | --- | --- | --- | --- |
 | `/api/cron/weekly-digest` | `0 13 * * 1` | Weekly performance digest email | Vercel Pro recommended |
 | `/api/cron/no-reply-check` | `0 14 * * *` | Contractor no-reply escalation after 24h | Hobby-compatible |
+| `/api/cron/monthly-ad-budget` | `0 15 1 * *` | Monthly Google Ads budget confirmation SMS | Requires Twilio for live sends |
 
 Both routes require `Authorization: Bearer ${CRON_SECRET}` in production. Missing `CRON_SECRET` must fail closed in production.
 
@@ -87,6 +88,7 @@ Local dev examples:
 ```powershell
 curl http://localhost:3000/api/cron/weekly-digest
 curl http://localhost:3000/api/cron/no-reply-check
+curl http://localhost:3000/api/cron/monthly-ad-budget
 ```
 
 ## I. Troubleshooting

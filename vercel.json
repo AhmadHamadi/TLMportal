@@ -16,6 +16,7 @@
   ],
   "crons": [
     { "path": "/api/cron/weekly-digest", "schedule": "0 13 * * 1" },
-    { "path": "/api/cron/no-reply-check", "schedule": "0 14 * * *" }
+    { "path": "/api/cron/no-reply-check", "schedule": "0 14 * * *" },
+    { "path": "/api/cron/monthly-ad-budget", "schedule": "0 15 1 * *" }
   ]
 }

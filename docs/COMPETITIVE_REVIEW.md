@@ -1,4 +1,4 @@
-﻿# Competitive Review - Contractor Lead Engine Portal
+# Competitive Review - Contractor Lead Engine Portal
 
 Reviewed against common agency/contractor platforms: GoHighLevel, ServiceTitan, Jobber, Housecall Pro, and similar field-service CRMs.
 
@@ -27,11 +27,11 @@ TLM Portal should not try to become a full field-service operating system. The s
 - Agency-controlled lead tracking.
 - Proof of lead source and appointment status.
 - Contractor confirmation workflow.
-- Dispute/billing accountability.
+- Booking and billing accountability.
 - Monthly marketing performance reporting.
 - Clean contractor mobile portal.
 
-This is the layer that generic CRMs and field-service tools often handle poorly: proving which marketing leads turned into billable estimate appointments.
+This is the layer that generic CRMs and field-service tools often handle poorly: proving which marketing leads turned into booked estimate appointments.
 
 ## Must-Have Client Experience
 For contractors, the portal should feel simpler than a CRM:
@@ -40,7 +40,7 @@ For contractors, the portal should feel simpler than a CRM:
 2. Who do I need to call/text now?
 3. Which appointments did I accept?
 4. What am I being charged for?
-5. How do I dispute a bad lead?
+5. How do I ask TLM to review a bad lead?
 6. What did my ad spend produce this month?
 
 If a screen does not answer one of those questions, it should be admin-only or hidden from the contractor.
@@ -51,7 +51,7 @@ Already strong:
 - Lead table and detail page.
 - Contractor mobile lead/appointment views.
 - Twilio call/SMS logging and contractor replies.
-- Billing records and dispute workflow.
+- Billing records and internal review workflow.
 - Manual Google Ads spend and monthly reports.
 - Onboarding checklist and contract templates.
 - Email notifications and weekly digests.
@@ -60,9 +60,9 @@ Already strong:
 Recommended next:
 - Password reset and secure invite-token flow.
 - Integration health page for Twilio, Stripe, email, AI, database.
-- Review request workflow after WON or COMPLETED_ESTIMATE.
+- Review request workflow after COMPLETED_ESTIMATE.
 - Contractor response-time metric and SLA alerts.
-- Lead quality dashboard: billable rate, dispute rate, booked rate, cost per billable appointment.
+- Lead quality dashboard: booked appointment rate and cost per booked appointment.
 - Client-facing monthly report email with PDF link or attached report.
 - Playwright smoke tests for admin and contractor flows.
 
@@ -78,12 +78,12 @@ Monthly reports should show:
 - Leads by source.
 - Calls, forms, and SMS replies.
 - Confirmed appointments.
-- Billable appointments.
-- Disputes opened/approved/rejected.
+- Booked appointments.
+- Internal reviews opened/approved/rejected.
 - Ad spend.
 - Cost per lead.
 - Cost per confirmed appointment.
-- Cost per billable appointment.
+- Cost per booked appointment.
 - Recommended next actions for the next month.
 
 ## Onboarding Standard
@@ -106,7 +106,7 @@ Critical operational messages should be short and direct:
 - New lead alert.
 - Appointment accepted/declined.
 - No contractor response after 24h.
-- Dispute opened/resolved.
+- Internal review opened/resolved.
 - Weekly/monthly performance summary.
 
 Do not let AI or templates promise discounts, exact arrival times, warranties, or guaranteed results.
@@ -123,9 +123,9 @@ Recent product docs and public help centers confirm the same pattern across the 
 Design implication for TLM Portal:
 
 - Match the market standard: automated confirmation/reminder texts, two-way history, and clean customer-facing wording.
-- Keep our differentiator: tie every message to lead source, appointment billability, dispute status, and agency billing proof.
+- Keep our differentiator: tie every message to lead source, appointment booked appointment status and agency billing proof.
 - Do not try to out-ServiceTitan ServiceTitan with dispatch, tech GPS, or pricebooks. That is not the wedge.
-- Do beat generic CRMs on lead accountability: who came in, who replied, what time was agreed, who accepted, what became billable, and whether the contractor disputed it.
+- Do beat generic CRMs on lead accountability: who came in, who replied, what time was agreed, who accepted, what became a booked appointment and whether it needed internal review.
 
 Useful references:
 

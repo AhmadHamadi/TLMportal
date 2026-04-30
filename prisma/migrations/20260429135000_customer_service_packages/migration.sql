@@ -1,0 +1,7 @@
+ALTER TABLE "Customer"
+  ADD COLUMN "leadEngineEnabled" BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN "googleAdsEnabled" BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN "websiteEnabled" BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN "localSeoEnabled" BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN "gbpEnabled" BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN "seoGbpMonthlyRetainer" DECIMAL(10, 2) NOT NULL DEFAULT 0;

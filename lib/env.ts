@@ -10,18 +10,18 @@ const envSchema = z.object({
   AUTH_SECRET: z.string().min(32, "AUTH_SECRET must be at least 32 chars"),
   AUTH_URL: z.string().url().optional(),
 
-  // Phase 2 — optional until Twilio integration lands
+  // Phase 2 - optional until Twilio integration lands
   TWILIO_ACCOUNT_SID: z.string().optional(),
   TWILIO_AUTH_TOKEN: z.string().optional(),
   TWILIO_MESSAGING_SERVICE_SID: z.string().optional(),
   TWILIO_WEBHOOK_AUTH_TOKEN: z.string().optional(),
 
-  // Phase 3 — optional until Stripe integration lands
+  // Phase 3 - optional until Stripe integration lands
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().optional(),
 
-  // Email (Resend) — optional until configured
+  // Email (Resend) - optional until configured
   RESEND_API_KEY: z.string().optional(),
   RESEND_FROM_EMAIL: z.string().optional(),
   EMAIL_PROVIDER: z.enum(["resend", "smtp"]).optional(),
@@ -32,10 +32,10 @@ const envSchema = z.object({
   SMTP_PASSWORD: z.string().optional(),
   SMTP_FROM_EMAIL: z.string().optional(),
 
-  // AI (Anthropic / Claude) — optional until configured
+  // AI (Anthropic / Claude) - optional until configured
   ANTHROPIC_API_KEY: z.string().optional(),
 
-  // Cron auth — Vercel Cron sends Authorization: Bearer <CRON_SECRET>
+  // Cron auth - Vercel Cron sends Authorization: Bearer <CRON_SECRET>
   CRON_SECRET: z.string().optional(),
 });
 

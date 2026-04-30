@@ -52,7 +52,6 @@ export function LeadCard({ lead }: { lead: LeadCardLead }) {
 
       <div className="mt-3 flex flex-wrap gap-2">
         <StatusBadge status={lead.status} />
-        <StatusBadge status={lead.billableStatus} />
         <span className="text-xs text-muted-foreground self-center">
           {formatDateTime(lead.createdAt)}
         </span>

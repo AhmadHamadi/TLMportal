@@ -11,11 +11,11 @@ This portal should coordinate estimates quickly without pretending to be a fully
    - Reply `YES` if the requested time works.
    - Reply `BUSY` with a better time if they need a different slot.
    - Reply `NO` to decline.
-   - Reply `BAD` to open a dispute for spam, wrong number, bad fit, or other invalid lead.
-5. If contractor replies `YES`, appointment becomes accepted and billable, the dispute window starts, and the lead gets a confirmation SMS.
+   - Reply `BAD` to flag an internal review for spam, wrong number, bad fit, or other invalid lead.
+5. If contractor replies `YES`, appointment becomes accepted, the internal review window starts, and the lead gets a confirmation SMS.
 6. If contractor replies `BUSY`, the lead is asked for alternative options and admin gets a notification to watch the reschedule.
-7. If contractor replies `NO`, the appointment is declined and not billable.
-8. If contractor replies `BAD`, a dispute opens and the lead is marked disputed.
+7. If contractor replies `NO`, the appointment is declined.
+8. If contractor replies `BAD`, an internal review is logged for admin.
 
 ## Missed-Call Text-Back
 
@@ -73,7 +73,7 @@ Add reminders after the core webhook path is stable:
 - Lead confirmation reminder: 24 hours before appointment.
 - Contractor reminder: morning of appointment.
 - No-reply escalation: already wired by `/api/cron/no-reply-check` for contractor no-replies after 24 hours.
-- Post-estimate admin check: ask contractor whether estimate completed, quote sent, won/lost, or needs follow-up.
+- Post-estimate admin check: ask contractor whether estimate completed, quote sent or needs follow-up.
 
 ## Current Implementation
 

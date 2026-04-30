@@ -4,27 +4,29 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
-  Inbox,
+  LayoutDashboard,
   CalendarCheck,
-  Receipt,
-  Menu,
+  Phone,
+  MessageSquare,
+  Settings,
   type LucideIcon,
 } from "lucide-react";
 
 type Tab = { href: string; label: string; icon: LucideIcon };
 
 const TABS: Tab[] = [
-  { href: "/contractor/leads", label: "Leads", icon: Inbox },
-  { href: "/contractor/appointments", label: "Appts", icon: CalendarCheck },
-  { href: "/contractor/billing", label: "Billing", icon: Receipt },
-  { href: "/contractor/more", label: "More", icon: Menu },
+  { href: "/contractor", label: "Home", icon: LayoutDashboard },
+  { href: "/contractor/appointments", label: "Calendar", icon: CalendarCheck },
+  { href: "/contractor/calls", label: "Calls", icon: Phone },
+  { href: "/contractor/sms", label: "SMS", icon: MessageSquare },
+  { href: "/contractor/settings", label: "Settings", icon: Settings },
 ];
 
 export function BottomNav() {
   const pathname = usePathname();
   return (
     <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-card border-t pb-[max(env(safe-area-inset-bottom),8px)] pt-2">
-      <ul className="grid grid-cols-4">
+      <ul className="grid grid-cols-5">
         {TABS.map((tab) => {
           const active = pathname === tab.href || pathname.startsWith(tab.href + "/");
           const Icon = tab.icon;

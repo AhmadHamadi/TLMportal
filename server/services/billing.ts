@@ -278,3 +278,171 @@ export async function contractorOverviewStats(ctx: AuthCtx) {
     costPerAppointment: cpa.toFixed(2),
   };
 }
+export async function contractorDashboardData(ctx: AuthCtx) {
+  if (ctx.role !== "CONTRACTOR") throw new ForbiddenError();
+  const where = { customerId: { in: ctx.customerIds } };
+  const now = new Date();
+  const todayStart = new Date(now);
+  todayStart.setHours(0, 0, 0, 0);
+  const next14Days = new Date(todayStart);
+  next14Days.setDate(next14Days.getDate() + 14);
+
+  const [
+    customers,
+    actionAppointments,
+    upcomingAppointments,
+    recentLeads,
+    recentCallLogs,
+    notifications,
+  ] = await Promise.all([
+    db.customer.findMany({
+      where: { id: { in: ctx.customerIds }, deletedAt: null },
+      select: {
+        id: true,
+        businessName: true,
+        monthlyAdBudget: true,
+        googleAdsBudgetCurrency: true,
+        leadEngineEnabled: true,
+        googleAdsEnabled: true,
+        websiteEnabled: true,
+        localSeoEnabled: true,
+        gbpEnabled: true,
+        seoGbpMonthlyRetainer: true,
+      },
+    }),
+    db.appointment.findMany({
+      where: {
+        ...where,
+        status: { in: ["REQUESTED", "CONFIRMED", "SENT_TO_CONTRACTOR"] },
+      },
+      orderBy: [{ appointmentWindowStart: "asc" }, { createdAt: "desc" }],
+      take: 6,
+      include: {
+        lead: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            city: true,
+            serviceRequested: true,
+            source: true,
+            status: true,
+          },
+        },
+      },
+    }),
+    db.appointment.findMany({
+      where: {
+        ...where,
+        appointmentWindowStart: { gte: todayStart, lt: next14Days },
+        status: { in: ["ACCEPTED", "CONFIRMED", "SENT_TO_CONTRACTOR", "REQUESTED"] },
+      },
+      orderBy: { appointmentWindowStart: "asc" },
+      include: {
+        lead: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            city: true,
+            serviceRequested: true,
+            source: true,
+            status: true,
+          },
+        },
+      },
+    }),
+    db.lead.findMany({
+      where: { ...where, deletedAt: null },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        city: true,
+        serviceRequested: true,
+        status: true,
+        createdAt: true,
+        appointment: { select: { status: true, appointmentWindowStart: true } },
+      },
+    }),
+    db.callLog.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take: 6,
+      include: {
+        lead: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            serviceRequested: true,
+            appointment: { select: { id: true, status: true } },
+          },
+        },
+      },
+    }),
+    db.notification.findMany({
+      where: {
+        OR: [{ customerId: { in: ctx.customerIds } }, { userId: ctx.userId }],
+        status: "UNREAD",
+      },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      select: { id: true, title: true, message: true, category: true, link: true, createdAt: true },
+    }),
+  ]);
+
+  return { customers, actionAppointments, upcomingAppointments, recentLeads, recentCallLogs, notifications };
+}
+
+export async function contractorCallLogData(ctx: AuthCtx) {
+  if (ctx.role !== "CONTRACTOR") throw new ForbiddenError();
+  return db.callLog.findMany({
+    where: { customerId: { in: ctx.customerIds } },
+    orderBy: { createdAt: "desc" },
+    take: 50,
+    include: {
+      lead: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          serviceRequested: true,
+          appointment: { select: { id: true, status: true } },
+        },
+      },
+    },
+  });
+}
+
+export async function contractorSmsSummaryData(ctx: AuthCtx) {
+  if (ctx.role !== "CONTRACTOR") throw new ForbiddenError();
+  const leads = await db.lead.findMany({
+    where: {
+      customerId: { in: ctx.customerIds },
+      deletedAt: null,
+      smsMessages: { some: {} },
+    },
+    orderBy: { updatedAt: "desc" },
+    take: 50,
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      phone: true,
+      serviceRequested: true,
+      city: true,
+      preferredTime: true,
+      status: true,
+      appointment: { select: { id: true, status: true, appointmentWindowStart: true } },
+      smsMessages: {
+        orderBy: { createdAt: "desc" },
+        take: 3,
+        select: { id: true, direction: true, body: true, createdAt: true },
+      },
+    },
+  });
+  return leads;
+}

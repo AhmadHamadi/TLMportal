@@ -47,10 +47,17 @@ async function main() {
       websiteUrl: "https://atlasconcrete.example",
       landingPageUrl: "https://leads.tlm/atlas-concrete",
       googleAdsCustomerId: "123-456-7890",
+      leadEngineEnabled: true,
+      googleAdsEnabled: true,
+      websiteEnabled: false,
+      localSeoEnabled: true,
+      gbpEnabled: true,
       setupFee: dec(1500),
       monthlyRetainer: dec(750),
       appointmentFee: dec(125),
+      seoGbpMonthlyRetainer: dec(750),
       monthlyAdBudget: dec(2000),
+      googleAdsBudgetCurrency: "CAD",
       minProjectSize: dec(2500),
       status: "ACTIVE",
       services: {
@@ -111,10 +118,17 @@ async function main() {
       forwardingPhone: "+14165550202",
       websiteUrl: "https://northsideinterlock.example",
       landingPageUrl: "https://leads.tlm/northside-interlock",
+      leadEngineEnabled: true,
+      googleAdsEnabled: true,
+      websiteEnabled: false,
+      localSeoEnabled: false,
+      gbpEnabled: false,
       setupFee: dec(1200),
       monthlyRetainer: dec(600),
       appointmentFee: dec(100),
+      seoGbpMonthlyRetainer: dec(0),
       monthlyAdBudget: dec(1500),
+      googleAdsBudgetCurrency: "CAD",
       status: "ACTIVE",
       services: {
         create: [
@@ -219,7 +233,7 @@ async function main() {
       phone: "+14165551114",
       city: "Mississauga",
       serviceRequested: "Driveway",
-      status: "WON",
+      status: "COMPLETED_ESTIMATE",
       billableStatus: "BILLABLE",
     },
     {
@@ -335,7 +349,7 @@ async function main() {
       phone: "+14165552205",
       city: "Vaughan",
       serviceRequested: "Patio",
-      status: "WON",
+      status: "COMPLETED_ESTIMATE",
       billableStatus: "BILLABLE",
     },
     {
@@ -345,7 +359,7 @@ async function main() {
       phone: "+14165552206",
       city: "Vaughan",
       serviceRequested: "Driveway",
-      projectDetails: "DIY question — wants to know what bag mix to buy.",
+      projectDetails: "DIY question - wants to know what bag mix to buy.",
       status: "NOT_BILLABLE",
       billableStatus: "NOT_BILLABLE",
       notBillableReason: "DIY_QUESTION",
@@ -390,7 +404,7 @@ async function main() {
   ];
   await db.lead.createMany({ data: northsideLeadsData });
 
-  // ----- Appointments — pick a few of each customer's leads -----
+  // ----- Appointments - pick a few of each customer's leads -----
   const atlasLeads = await db.lead.findMany({
     where: { customerId: atlas.id },
     orderBy: { createdAt: "asc" },

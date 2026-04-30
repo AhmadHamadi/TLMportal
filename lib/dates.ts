@@ -11,7 +11,7 @@ export function billingMonthKey(d = new Date()): string {
 }
 
 export function formatDateTime(d: Date | null | undefined): string {
-  if (!d) return "—";
+  if (!d) return "-";
   return new Intl.DateTimeFormat("en-CA", {
     dateStyle: "medium",
     timeStyle: "short",
@@ -19,7 +19,7 @@ export function formatDateTime(d: Date | null | undefined): string {
 }
 
 export function formatDate(d: Date | null | undefined): string {
-  if (!d) return "—";
+  if (!d) return "-";
   return new Intl.DateTimeFormat("en-CA", { dateStyle: "medium" }).format(d);
 }
 

@@ -83,7 +83,7 @@ export function AppointmentSection({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           Appointment <StatusBadge status={appt.status} />
-          {appt.isBillable ? <StatusBadge status="BILLABLE" /> : null}
+          {viewerRole === "ADMIN" && appt.isBillable ? <StatusBadge status="READY_FOR_FEE" /> : null}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2 text-sm">
@@ -97,7 +97,9 @@ export function AppointmentSection({
         <Row label="Confirmed" value={formatDateTime(appt.confirmedAt)} />
         <Row label="Sent to contractor" value={formatDateTime(appt.sentToContractorAt)} />
         <Row label="Accepted" value={formatDateTime(appt.acceptedByContractorAt)} />
-        <Row label="Dispute window ends" value={formatDateTime(appt.disputeWindowEndsAt)} />
+        {viewerRole === "ADMIN" ? (
+          <Row label="Internal review window ends" value={formatDateTime(appt.disputeWindowEndsAt)} />
+        ) : null}
         {appt.notes ? <Row label="Notes" value={appt.notes} /> : null}
 
         <div className="flex flex-wrap gap-2 pt-3">

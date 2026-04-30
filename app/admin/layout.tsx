@@ -16,7 +16,6 @@ const NAV: NavGroup[] = [
       { href: "/admin/appointments", label: "Appointments", iconKey: "appointments" },
       { href: "/admin/calls", label: "Calls", iconKey: "calls" },
       { href: "/admin/sms", label: "SMS", iconKey: "sms" },
-      { href: "/admin/disputes", label: "Disputes", iconKey: "disputes" },
     ],
   },
   {

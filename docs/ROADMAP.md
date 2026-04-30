@@ -8,7 +8,7 @@ This document tracks what has shipped and what should happen next. The original 
 - Phase 2: Auth.js v5, role proxy, admin and contractor shells.
 - Phase 3: Customer CRUD, service areas, services, contractor user invite.
 - Phase 4: Lead CRUD, filters, detail page, activity timeline, manual SMS.
-- Phase 5: Contractor mobile dashboard, leads, appointments, billing, disputes.
+- Phase 5: Contractor mobile dashboard, leads, appointments, billing, internal reviews.
 - Phase 6: Twilio voice/SMS webhooks, call forwarding, outbound SMS, contractor YES/NO/BUSY/BAD handling.
 - Phase 7: Stripe customers, subscriptions, invoice items, payment webhook sync.
 - Phase 8: Automation rules with allowlisted SMS templates and no-reply trigger.
@@ -24,7 +24,7 @@ This document tracks what has shipped and what should happen next. The original 
 
 ## Next Recommended Work
 1. Add password reset and invite-token flow before onboarding real clients.
-2. Add Playwright smoke tests for admin login, contractor login, lead detail, appointment accept, and dispute filing.
+2. Add Playwright smoke tests for admin login, contractor login, lead detail, appointment accept, and internal review.
 3. Add Google Ads API integration after manual spend workflow is stable.
 4. Add Vercel Blob or S3 storage for signed contract PDFs.
 5. Add call recording/transcription only after legal disclosure and consent language is ready.

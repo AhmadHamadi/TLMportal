@@ -5,7 +5,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Inbox } from "lucide-react";
 import { LeadCard } from "@/components/contractor/lead-card";
 
-export const metadata = { title: "Leads — TLM Portal" };
+export const metadata = { title: "Leads - TLM Portal" };
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -31,7 +31,7 @@ export default async function ContractorLeadsPage({
       <div>
         <h1 className="text-xl font-semibold tracking-tight">Your leads</h1>
         <p className="text-sm text-muted-foreground">
-          {total} total · tap a card to call, text, or update.
+          {total} total - full contact details unlock when the booked appointment is accepted or confirmed.
         </p>
       </div>
 

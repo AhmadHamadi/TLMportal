@@ -70,15 +70,17 @@ pnpm db:seed
 ## Client Onboarding Access
 - Read docs/CLIENT_ONBOARDING_ACCESS.md before changing contractor account setup, Google Ads, Google Business Profile, Search Console, domain/DNS, or review-request workflows.
 - Contractor portal accounts may be created by admin during onboarding, but passwords must be temporary and users must be able to change them.
+- Read docs/CLIENT_SETUP_PLAYBOOK.md before changing setup flows for landing pages, Google Ads manager access, GBP, Twilio tracking numbers, contractor dashboard summaries, or ad budget request workflows.
 
 ## Lead Visibility And Billing
 - Read docs/LEAD_VISIBILITY_BILLING_POLICY.md before changing contractor lead lists, lead detail pages, appointment billing, call tracking, or contact reveal rules.
 - Contractors should see all lead records for transparency, but full phone/email/address should remain gated until a confirmed/accepted opportunity.
 - Contractors should not be able to self-void billing with a direct dispute form. Review requests are admin-reviewed before billing changes.
+- Contractor portal should stay simple: overview, appointment calendar, call log, SMS summary, settings/password, and Google Ads budget requests. Do not re-add contractor billing/dispute navigation unless the user explicitly asks.
 
 ## Agency Workflow Research
 - Read docs/AGENCY_WORKFLOW_RESEARCH.md before changing admin dashboard priorities, lead qualification workflow, reporting, or pay-per-appointment policy.
-- Avoid HomeAdvisor-style overclaims. Reports must distinguish raw leads, qualified leads, booked appointments, billable appointments, disputes, and won jobs.
+- Avoid HomeAdvisor-style overclaims. Client-facing reports should stay simple: leads and booked appointments. Internal billing/review states can exist for admin protection, but should not dominate the client portal.
 
 ## Before Shipping
 - Confirm contractor cannot access another customer's direct lead/customer/report URLs.

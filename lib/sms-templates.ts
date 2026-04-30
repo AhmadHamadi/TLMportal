@@ -48,7 +48,7 @@ export const SMS_TEMPLATES = {
     preferredTime?: string | null;
     projectDetails?: string | null;
   }) {
-    return `Estimate request: ${clean(leadName, "Lead")} wants ${clean(service, "a project")} in ${clean(cityOrNeighbourhood, "your area")}. Requested time: ${clean(preferredTime, "flexible")}. Notes: ${clean(projectDetails, "none")}. Reply YES if that works, BUSY with a better time, NO to decline, or BAD to dispute.`;
+    return `Estimate request: ${clean(leadName, "Lead")} wants ${clean(service, "a project")} in ${clean(cityOrNeighbourhood, "your area")}. Requested time: ${clean(preferredTime, "flexible")}. Notes: ${clean(projectDetails, "none")}. Reply YES if that works, BUSY with a better time, NO to decline, or BAD to flag for review.`;
   },
 
   contractorAccepted({
@@ -97,5 +97,17 @@ export const SMS_TEMPLATES = {
     service?: string | null;
   }) {
     return `Sorry we missed your call to ${clean(businessName, "the contractor")}. What can we help with for ${clean(service, "your project")}? Reply with your project details and 1-2 good times for a callback.`;
+  },
+
+  monthlyAdBudgetConfirmation({
+    businessName,
+    amount,
+    currency,
+  }: {
+    businessName?: string | null;
+    amount: string;
+    currency: "CAD" | "USD";
+  }) {
+    return `Hi ${clean(businessName, "there")}, do you want to keep your Google Ads budget at ${currency} ${amount} for the next 30 days? Reply KEEP or send a new amount. Minimum 700.`;
   },
 };

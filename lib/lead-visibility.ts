@@ -5,7 +5,6 @@ const CONTACT_VISIBLE_LEAD_STATUSES = new Set<LeadStatus>([
   "ACCEPTED_BY_CONTRACTOR",
   "COMPLETED_ESTIMATE",
   "QUOTED",
-  "WON",
 ]);
 
 const CONTACT_VISIBLE_APPOINTMENT_STATUSES = new Set<AppointmentStatus>([

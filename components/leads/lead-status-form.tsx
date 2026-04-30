@@ -17,7 +17,6 @@ import { toast } from "sonner";
 
 const CONTRACTOR_STATUSES = [
   "QUOTED",
-  "WON",
   "LOST",
   "COMPLETED_ESTIMATE",
 ] as const;

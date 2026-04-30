@@ -3,7 +3,7 @@
 This is the durable brief for Claude/Codex sessions on the Trade Leads Marketing agency portal.
 
 ## Product
-TLM Portal is an agency operations system for a contractor lead-engine service. It is not a generic CRM. It tracks customers, leads, calls, SMS, appointments, disputes, billing, ad spend, onboarding, contracts, reports, and integration health.
+TLM Portal is an agency operations system for a contractor lead-engine service. It is not a generic CRM. It tracks customers, leads, calls, SMS, booked appointments, internal reviews, billing, ad spend, onboarding, contracts, reports, and integration health.
 
 Roles:
 - Admin: agency owner/operator with access to all customers and operations.
@@ -37,13 +37,18 @@ Implemented areas:
 - Auth, proxy, admin shell, contractor shell.
 - Customers CRUD, services, service areas, contractor user invite.
 - Leads CRUD, lead detail, timelines, manual SMS, contractor notifications.
-- Appointments, accept/decline, billable state, dispute window.
-- Disputes, admin review, billing state changes.
+- Appointments, accept/decline, internal billing state, internal review window.
+- Admin-only reviews and billing state changes.
 - Twilio voice and SMS webhooks, SMS parser, simulated mode when credentials are absent.
 - Stripe customer/subscription/invoice item actions and webhook handling.
 - Automation rules with allowlisted template variables.
 - Manual Google Ads spend, reports, onboarding checklist, contracts, prompt library, AI ad recommendations, Resend emails.
 - Tests for auth guard, leads isolation, appointments/disputes, billing evaluation, automation, SMS parser, phone handling.
+
+Core workflow docs:
+- `docs/CLIENT_SETUP_PLAYBOOK.md` for landing page, Google Ads manager, GBP, Twilio tracking number, and onboarding setup.
+- `docs/SMS_APPOINTMENT_WORKFLOW.md` for lead-to-SMS-to-booked-appointment flow.
+- `docs/LEAD_VISIBILITY_BILLING_POLICY.md` for contact reveal and internal billing protection rules.
 
 ## Production Environment
 Required:
@@ -104,7 +109,7 @@ Read docs/LEAD_VISIBILITY_BILLING_POLICY.md before changing contractor lead list
 Read docs/AGENCY_WORKFLOW_RESEARCH.md before changing admin dashboard priorities, lead qualification workflow, reporting, or pay-per-appointment policy. Avoid HomeAdvisor-style overclaims: separate raw leads, qualified leads, booked appointments, billable appointments, disputes, and won jobs.
 
 ## Known Future Work
-- Real Google Ads API integration to replace manual spend entry.
+- Real Google Ads API integration to replace manual spend entry and budget updates.
 - Vercel Blob or other storage for uploaded/signed contracts.
 - Call recording and transcription, if legally approved and disclosed.
 - Stronger password reset/invite flow before production client rollout.

@@ -31,7 +31,7 @@ enum LeadStatus {
   NEW CONTACTED QUALIFIED
   APPOINTMENT_REQUESTED APPOINTMENT_CONFIRMED
   SENT_TO_CONTRACTOR ACCEPTED_BY_CONTRACTOR DECLINED_BY_CONTRACTOR
-  COMPLETED_ESTIMATE QUOTED WON LOST
+  COMPLETED_ESTIMATE QUOTED LOST
   DISPUTED NOT_BILLABLE CANCELLED DUPLICATE SPAM
 }
 
@@ -71,7 +71,8 @@ enum NotificationStatus { UNREAD READ ARCHIVED }
 ### `Customer`
 - `deletedAt DateTime?` (soft delete)
 - `slug String @unique` — for tenant-scoped URLs (`admin/customers/[slug]`); generated from businessName
-- `setupFee`, `monthlyRetainer`, `appointmentFee`, `monthlyAdBudget` → `Decimal(10,2)`
+- `setupFee`, `monthlyRetainer`, `appointmentFee`, `monthlyAdBudget` -> `Decimal(10,2)`
+- `googleAdsBudgetCurrency String @default("CAD")` -> `CAD` or `USD` for monthly ad budget confirmations
 - `disputeWindowHours Int @default(48)` — per-customer override
 - `minProjectSize Decimal(10,2)?` — for billable-eligibility check
 

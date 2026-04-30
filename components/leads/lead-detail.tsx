@@ -45,7 +45,7 @@ export function LeadDetail({
               {[lead.firstName, lead.lastName].filter(Boolean).join(" ") || "Unnamed lead"}
             </h1>
             <StatusBadge status={lead.status} />
-            <StatusBadge status={lead.billableStatus} />
+            {viewerRole === "ADMIN" ? <StatusBadge status={lead.billableStatus} /> : null}
           </div>
           <p className="text-sm text-muted-foreground mt-1">
             {lead.customer.businessName} - {lead.source.replace(/_/g, " ")} - created{" "}
@@ -91,11 +91,11 @@ export function LeadDetail({
                 </div>
               </>
             ) : null}
-            {lead.notBillableReason ? (
+            {viewerRole === "ADMIN" && lead.notBillableReason ? (
               <>
                 <Separator />
                 <Row
-                  label="Not-billable reason"
+                  label="Internal review reason"
                   value={lead.notBillableReason.replace(/_/g, " ")}
                 />
               </>

@@ -161,7 +161,7 @@ export async function updateLeadStatus(ctx: AuthCtx, input: LeadStatusUpdateInpu
       data: {
         leadId: lead.id,
         type: "STATUS_CHANGED",
-        description: `${before.status} → ${input.status}${input.note ? ` — ${input.note}` : ""}`,
+        description: `${before.status} -> ${input.status}${input.note ? ` - ${input.note}` : ""}`,
         createdByUserId: ctx.userId,
         metadata: { from: before.status, to: input.status, note: input.note ?? null },
       },
@@ -198,7 +198,7 @@ export async function setLeadBillable(ctx: AuthCtx, input: LeadBillableUpdateInp
       data: {
         leadId: lead.id,
         type: "BILLABLE_CHANGED",
-        description: `${before.billableStatus} → ${input.billableStatus}`,
+        description: `${before.billableStatus} -> ${input.billableStatus}`,
         createdByUserId: ctx.userId,
         metadata: { reason: input.notBillableReason ?? null },
       },

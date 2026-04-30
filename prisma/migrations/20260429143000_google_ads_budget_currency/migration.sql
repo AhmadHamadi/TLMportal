@@ -1,0 +1,1 @@
+ALTER TABLE "Customer" ADD COLUMN "googleAdsBudgetCurrency" TEXT NOT NULL DEFAULT 'CAD';

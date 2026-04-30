@@ -69,7 +69,6 @@ export function AppointmentCard({ appt }: { appt: Appt }) {
 
       <div className="mt-3 flex flex-wrap gap-2">
         <StatusBadge status={appt.status} />
-        {appt.isBillable ? <StatusBadge status="BILLABLE" /> : null}
       </div>
 
       {canDecide ? (

@@ -34,11 +34,18 @@ type Customer = {
   setupFee?: string;
   monthlyRetainer?: string;
   appointmentFee?: string;
+  seoGbpMonthlyRetainer?: string;
   monthlyAdBudget?: string;
+  googleAdsBudgetCurrency?: "CAD" | "USD";
   minProjectSize?: string | null;
   disputeWindowHours?: number;
   status?: "ACTIVE" | "PAUSED" | "WINTER_MODE" | "CANCELLED";
   notes?: string | null;
+  leadEngineEnabled?: boolean;
+  googleAdsEnabled?: boolean;
+  websiteEnabled?: boolean;
+  localSeoEnabled?: boolean;
+  gbpEnabled?: boolean;
 };
 
 export function CustomerForm({ customer }: { customer?: Customer }) {
@@ -151,7 +158,7 @@ export function CustomerForm({ customer }: { customer?: Customer }) {
             <input
               type="checkbox"
               name="packageLeadEngine"
-              defaultChecked={!editing}
+              defaultChecked={customer?.leadEngineEnabled ?? !editing}
               className="mt-1"
             />
             <span>
@@ -162,7 +169,7 @@ export function CustomerForm({ customer }: { customer?: Customer }) {
             </span>
           </label>
           <label className="flex items-start gap-2 rounded-md border bg-card p-3 text-sm">
-            <input type="checkbox" name="packageGoogleAds" defaultChecked={!editing} className="mt-1" />
+            <input type="checkbox" name="packageGoogleAds" defaultChecked={customer?.googleAdsEnabled ?? !editing} className="mt-1" />
             <span>
               <span className="font-medium">Google Ads management</span>
               <span className="block text-xs text-muted-foreground">
@@ -171,7 +178,7 @@ export function CustomerForm({ customer }: { customer?: Customer }) {
             </span>
           </label>
           <label className="flex items-start gap-2 rounded-md border bg-card p-3 text-sm">
-            <input type="checkbox" name="packageWebsite" className="mt-1" />
+            <input type="checkbox" name="packageWebsite" defaultChecked={customer?.websiteEnabled ?? false} className="mt-1" />
             <span>
               <span className="font-medium">Website / landing page</span>
               <span className="block text-xs text-muted-foreground">
@@ -180,20 +187,20 @@ export function CustomerForm({ customer }: { customer?: Customer }) {
             </span>
           </label>
           <label className="flex items-start gap-2 rounded-md border bg-card p-3 text-sm">
-            <input type="checkbox" name="packageSeo" className="mt-1" />
+            <input type="checkbox" name="packageSeo" defaultChecked={customer?.localSeoEnabled ?? false} className="mt-1" />
             <span>
               <span className="font-medium">Local SEO</span>
               <span className="block text-xs text-muted-foreground">
-                Service pages, technical SEO, Search Console, local reporting.
+                Flat $750/month local SEO retainer. Results compound over months; not billed per booked appointment.
               </span>
             </span>
           </label>
           <label className="flex items-start gap-2 rounded-md border bg-card p-3 text-sm">
-            <input type="checkbox" name="packageGbp" className="mt-1" />
+            <input type="checkbox" name="packageGbp" defaultChecked={customer?.gbpEnabled ?? false} className="mt-1" />
             <span>
               <span className="font-medium">Google Business Profile</span>
               <span className="block text-xs text-muted-foreground">
-                GBP access, services, posts, photos, review request workflow.
+                GBP management included in the $750/month SEO/GBP retainer when selected with Local SEO.
               </span>
             </span>
           </label>
@@ -264,6 +271,19 @@ export function CustomerForm({ customer }: { customer?: Customer }) {
             />
           </div>
           <div>
+            <Label htmlFor="seoGbpMonthlyRetainer">SEO/GBP monthly retainer</Label>
+            <Input
+              id="seoGbpMonthlyRetainer"
+              name="seoGbpMonthlyRetainer"
+              type="number"
+              step="0.01"
+              defaultValue={customer?.seoGbpMonthlyRetainer ?? "750"}
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Use $750/month for SEO/GBP. Keep this separate from booked appointment fees.
+            </p>
+          </div>
+          <div>
             <Label htmlFor="monthlyAdBudget">Monthly ad budget</Label>
             <Input
               id="monthlyAdBudget"
@@ -272,6 +292,18 @@ export function CustomerForm({ customer }: { customer?: Customer }) {
               step="0.01"
               defaultValue={customer?.monthlyAdBudget ?? "0"}
             />
+          </div>
+          <div>
+            <Label htmlFor="googleAdsBudgetCurrency">Ad budget currency</Label>
+            <Select name="googleAdsBudgetCurrency" defaultValue={customer?.googleAdsBudgetCurrency ?? "CAD"}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="CAD">CAD</SelectItem>
+                <SelectItem value="USD">USD</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <Label htmlFor="minProjectSize">Minimum project size</Label>
@@ -285,7 +317,7 @@ export function CustomerForm({ customer }: { customer?: Customer }) {
             />
           </div>
           <div>
-            <Label htmlFor="disputeWindowHours">Dispute window (hours)</Label>
+            <Label htmlFor="disputeWindowHours">Internal review window (hours)</Label>
             <Input
               id="disputeWindowHours"
               name="disputeWindowHours"

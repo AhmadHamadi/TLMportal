@@ -1,4 +1,4 @@
-﻿# AI, MCP, And Service Opportunities
+# AI, MCP, And Service Opportunities
 
 This document captures useful integrations that could improve the portal or become add-on services for contractors.
 
@@ -10,7 +10,7 @@ Best use:
 
 - Visual smoke tests for admin and contractor dashboards.
 - Mobile navigation checks for contractor pages.
-- Login, lead detail, appointment accept, dispute filing, billing review, and onboarding wizard flows.
+- Login, lead detail, appointment accept, internal review, billing review, and onboarding wizard flows.
 - Screenshot evidence before shipping client-facing changes.
 
 Current status:
@@ -23,7 +23,7 @@ Priority smoke paths:
 1. Admin login -> dashboard -> leads -> lead detail.
 2. Contractor login -> leads -> lead detail -> call/text buttons visible.
 3. Contractor appointments -> accept/decline actions visible.
-4. Contractor billing -> clear fees, statuses, and dispute windows.
+4. Contractor billing -> clear fees, statuses, and internal review windows.
 5. Admin onboarding -> customer checklist -> tracking number -> invite user.
 
 ### Memory / Handoff MCP
@@ -52,16 +52,16 @@ Best use:
 
 ### Lead Quality Assistant
 
-Sellable value: helps contractors understand why some leads are billable and some are not.
+Sellable value: helps contractors understand which leads became booked appointments.
 
 Inputs:
 
-- Lead source, transcript/SMS, service requested, area, project size, duplicate history, dispute reason.
+- Lead source, transcript/SMS, service requested, area, project size, and duplicate history.
 
 Outputs:
 
 - Quality score.
-- Suggested billable/not-billable reason.
+- Suggested internal review reason.
 - Admin review note.
 - Contractor-friendly explanation.
 
@@ -90,7 +90,7 @@ Sellable value: turns reporting into retention.
 
 Inputs:
 
-- Leads, calls, appointments, disputes, ad spend, cost per lead, cost per billable appointment, won/lost notes.
+- Leads, calls, appointments, internal reviews, ad spend, cost per lead, cost per booked appointment, optional outcome notes.
 
 Outputs:
 
@@ -119,7 +119,7 @@ Sellable value: a natural upsell after appointments and completed estimates.
 
 Flow:
 
-- Appointment completed or job won.
+- Appointment completed.
 - Contractor confirms customer is happy.
 - System sends review request.
 - Admin sees reviews requested, clicked, completed.
@@ -147,7 +147,7 @@ Guardrail: comply with Google review policies. Do not gate reviews by sentiment.
 - Lead wants service the contractor does not offer.
 - Duplicate lead submits form and calls.
 - Contractor replies with free text instead of `YES/BUSY/NO/BAD`.
-- Contractor disputes after the dispute window.
+- Contractor internal reviews after the internal review window.
 - Twilio retries the same webhook.
 - Stripe webhook arrives before local billing state is updated.
 - Email provider is configured but DNS/authentication is incomplete.
@@ -162,7 +162,7 @@ Contractors should not feel like they are using a complicated CRM. They should s
 - Who needs action now.
 - Confirmed appointments.
 - What they are being charged for.
-- How to dispute bad leads.
+- How to ask TLM to review a bad lead.
 - What their marketing produced this month.
 
 Everything else belongs in the admin side.

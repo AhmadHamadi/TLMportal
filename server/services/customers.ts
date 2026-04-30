@@ -45,17 +45,22 @@ function parseInitialServices(value?: string | null): string[] {
 
 function selectedPackageLabels(input: {
   packageLeadEngine?: boolean;
+  leadEngineEnabled?: boolean;
   packageWebsite?: boolean;
+  websiteEnabled?: boolean;
   packageSeo?: boolean;
+  localSeoEnabled?: boolean;
   packageGbp?: boolean;
+  gbpEnabled?: boolean;
   packageGoogleAds?: boolean;
+  googleAdsEnabled?: boolean;
 }): string[] {
   return [
-    input.packageLeadEngine ? "Lead Engine" : null,
-    input.packageGoogleAds ? "Google Ads management" : null,
-    input.packageWebsite ? "Website/landing page" : null,
-    input.packageSeo ? "Local SEO" : null,
-    input.packageGbp ? "Google Business Profile" : null,
+    input.packageLeadEngine || input.leadEngineEnabled ? "Lead Engine" : null,
+    input.packageGoogleAds || input.googleAdsEnabled ? "Google Ads management" : null,
+    input.packageWebsite || input.websiteEnabled ? "Website/landing page" : null,
+    input.packageSeo || input.localSeoEnabled ? "Local SEO" : null,
+    input.packageGbp || input.gbpEnabled ? "Google Business Profile" : null,
   ].filter(Boolean) as string[];
 }
 
@@ -63,6 +68,7 @@ function buildBusinessModelNote(input: {
   notes?: string | null;
   payPerAppointment?: "yes" | "no";
   appointmentFee?: string | number | Prisma.Decimal;
+  seoGbpMonthlyRetainer?: string | number | Prisma.Decimal;
   packageLeadEngine?: boolean;
   packageWebsite?: boolean;
   packageSeo?: boolean;
@@ -71,12 +77,18 @@ function buildBusinessModelNote(input: {
 }) {
   const packages = selectedPackageLabels(input);
   const model =
-    input.payPerAppointment === "no"
+    !input.packageLeadEngine
+      ? "Billing model: flat monthly service retainer; no booked-appointment promise."
+      : input.payPerAppointment === "no"
       ? "Billing model: retainer only; no per-booked-appointment fee."
       : `Billing model: retainer plus booked appointment fee (${input.appointmentFee ?? "0"}).`;
   const packageLine =
     packages.length > 0 ? `Included services: ${packages.join(", ")}.` : null;
-  return [input.notes?.trim() || null, model, packageLine].filter(Boolean).join("\n");
+  const seoLine =
+    input.packageSeo || input.packageGbp
+      ? `SEO/GBP retainer: ${input.seoGbpMonthlyRetainer ?? "750"} per month.`
+      : null;
+  return [input.notes?.trim() || null, model, packageLine, seoLine].filter(Boolean).join("\n");
 }
 
 export async function listCustomers(ctx: AuthCtx) {
@@ -94,6 +106,13 @@ export async function listCustomers(ctx: AuthCtx) {
       status: true,
       monthlyRetainer: true,
       appointmentFee: true,
+      seoGbpMonthlyRetainer: true,
+      googleAdsBudgetCurrency: true,
+      leadEngineEnabled: true,
+      googleAdsEnabled: true,
+      websiteEnabled: true,
+      localSeoEnabled: true,
+      gbpEnabled: true,
       createdAt: true,
     },
   });
@@ -122,7 +141,9 @@ export async function createCustomer(ctx: AuthCtx, input: CustomerCreateInput) {
   const slug = await uniqueSlug(slugify(input.businessName));
   const initialServices = parseInitialServices(input.initialServices);
   const appointmentFee = input.payPerAppointment === "no" ? "0" : input.appointmentFee;
-  const notes = buildBusinessModelNote({ ...input, appointmentFee });
+  const seoGbpMonthlyRetainer =
+    input.packageSeo || input.packageGbp ? input.seoGbpMonthlyRetainer || "750" : "0";
+  const notes = buildBusinessModelNote({ ...input, appointmentFee, seoGbpMonthlyRetainer });
   return db.$transaction(async (tx) => {
     const customer = await tx.customer.create({
       data: {
@@ -137,10 +158,17 @@ export async function createCustomer(ctx: AuthCtx, input: CustomerCreateInput) {
         industry: input.industry,
         googleAdsCustomerId: input.googleAdsCustomerId,
         twilioMessagingServiceSid: input.twilioMessagingServiceSid,
+        leadEngineEnabled: input.packageLeadEngine,
+        googleAdsEnabled: input.packageGoogleAds,
+        websiteEnabled: input.packageWebsite,
+        localSeoEnabled: input.packageSeo,
+        gbpEnabled: input.packageGbp,
         setupFee: input.setupFee,
         monthlyRetainer: input.monthlyRetainer,
         appointmentFee,
+        seoGbpMonthlyRetainer,
         monthlyAdBudget: input.monthlyAdBudget,
+        googleAdsBudgetCurrency: input.googleAdsBudgetCurrency,
         minProjectSize: input.minProjectSize,
         disputeWindowHours: input.disputeWindowHours,
         status: input.status,
@@ -183,6 +211,8 @@ export async function updateCustomer(ctx: AuthCtx, input: CustomerUpdateInput) {
   } = input;
   const servicesToAdd = parseInitialServices(initialServices);
   const nextAppointmentFee = payPerAppointment === "no" ? "0" : rest.appointmentFee;
+  const nextSeoGbpMonthlyRetainer =
+    packageSeo || packageGbp ? rest.seoGbpMonthlyRetainer || "750" : rest.seoGbpMonthlyRetainer;
   const nextNotes =
     payPerAppointment ||
     packageLeadEngine ||
@@ -194,6 +224,7 @@ export async function updateCustomer(ctx: AuthCtx, input: CustomerUpdateInput) {
           notes: rest.notes,
           payPerAppointment,
           appointmentFee: nextAppointmentFee,
+          seoGbpMonthlyRetainer: nextSeoGbpMonthlyRetainer,
           packageLeadEngine,
           packageWebsite,
           packageSeo,
@@ -203,7 +234,15 @@ export async function updateCustomer(ctx: AuthCtx, input: CustomerUpdateInput) {
       : rest.notes;
   const data = {
     ...rest,
+    ...(packageLeadEngine !== undefined ? { leadEngineEnabled: packageLeadEngine } : {}),
+    ...(packageGoogleAds !== undefined ? { googleAdsEnabled: packageGoogleAds } : {}),
+    ...(packageWebsite !== undefined ? { websiteEnabled: packageWebsite } : {}),
+    ...(packageSeo !== undefined ? { localSeoEnabled: packageSeo } : {}),
+    ...(packageGbp !== undefined ? { gbpEnabled: packageGbp } : {}),
     ...(nextAppointmentFee !== undefined ? { appointmentFee: nextAppointmentFee } : {}),
+    ...(nextSeoGbpMonthlyRetainer !== undefined
+      ? { seoGbpMonthlyRetainer: nextSeoGbpMonthlyRetainer }
+      : {}),
     ...(nextNotes !== undefined ? { notes: nextNotes } : {}),
   };
   return db.$transaction(async (tx) => {
@@ -226,8 +265,8 @@ export async function updateCustomer(ctx: AuthCtx, input: CustomerUpdateInput) {
         action: "CUSTOMER_UPDATED",
         entityType: "Customer",
         entityId: id,
-        before: { ...before, setupFee: before.setupFee.toString(), monthlyRetainer: before.monthlyRetainer.toString(), appointmentFee: before.appointmentFee.toString(), monthlyAdBudget: before.monthlyAdBudget.toString(), minProjectSize: before.minProjectSize?.toString() ?? null } as Prisma.InputJsonValue,
-        after: { ...customer, setupFee: customer.setupFee.toString(), monthlyRetainer: customer.monthlyRetainer.toString(), appointmentFee: customer.appointmentFee.toString(), monthlyAdBudget: customer.monthlyAdBudget.toString(), minProjectSize: customer.minProjectSize?.toString() ?? null } as Prisma.InputJsonValue,
+        before: { ...before, setupFee: before.setupFee.toString(), monthlyRetainer: before.monthlyRetainer.toString(), appointmentFee: before.appointmentFee.toString(), seoGbpMonthlyRetainer: before.seoGbpMonthlyRetainer.toString(), monthlyAdBudget: before.monthlyAdBudget.toString(), minProjectSize: before.minProjectSize?.toString() ?? null } as Prisma.InputJsonValue,
+        after: { ...customer, setupFee: customer.setupFee.toString(), monthlyRetainer: customer.monthlyRetainer.toString(), appointmentFee: customer.appointmentFee.toString(), seoGbpMonthlyRetainer: customer.seoGbpMonthlyRetainer.toString(), monthlyAdBudget: customer.monthlyAdBudget.toString(), minProjectSize: customer.minProjectSize?.toString() ?? null } as Prisma.InputJsonValue,
       },
       tx,
     );

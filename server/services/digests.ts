@@ -4,6 +4,8 @@ import { sendEmail } from "@/lib/email";
 import { EmailTemplates } from "@/lib/email-templates";
 import { env } from "@/lib/env";
 import { startOfMonth, billingMonthKey } from "@/lib/dates";
+import { sendSms } from "@/lib/twilio";
+import { SMS_TEMPLATES } from "@/lib/sms-templates";
 
 /**
  * Sends the weekly Monday digest to every active contractor (linked
@@ -144,4 +146,86 @@ export async function checkContractorNoReply24h(): Promise<{
   }
 
   return { fired, skipped };
+}
+
+export async function sendMonthlyAdBudgetConfirmations(): Promise<{
+  sent: number;
+  skipped: number;
+  errors: number;
+}> {
+  const month = billingMonthKey();
+  const customers = await db.customer.findMany({
+    where: {
+      deletedAt: null,
+      status: "ACTIVE",
+      googleAdsEnabled: true,
+      monthlyAdBudget: { gte: 700 },
+    },
+    include: {
+      trackingNumbers: {
+        where: { status: "ACTIVE" },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
+    },
+  });
+
+  let sent = 0;
+  let skipped = 0;
+  let errors = 0;
+
+  for (const customer of customers) {
+    const alreadySent = await db.auditLog.findFirst({
+      where: {
+        customerId: customer.id,
+        action: "MONTHLY_AD_BUDGET_SMS_SENT",
+        metadata: { path: ["month"], equals: month },
+      },
+    });
+    if (alreadySent) {
+      skipped += 1;
+      continue;
+    }
+
+    try {
+      const body = SMS_TEMPLATES.monthlyAdBudgetConfirmation({
+        businessName: customer.businessName,
+        amount: customer.monthlyAdBudget.toString(),
+        currency: customer.googleAdsBudgetCurrency === "USD" ? "USD" : "CAD",
+      });
+      const result = await sendSms({
+        to: customer.forwardingPhone,
+        from: customer.trackingNumbers[0]?.twilioPhoneNumber,
+        body,
+      });
+
+      await db.$transaction(async (tx) => {
+        await tx.smsMessage.create({
+          data: {
+            customerId: customer.id,
+            fromNumber: customer.trackingNumbers[0]?.twilioPhoneNumber ?? "+system",
+            toNumber: customer.forwardingPhone,
+            body,
+            direction: "OUTBOUND",
+            providerMessageId: result.providerMessageId,
+            status: result.status,
+          },
+        });
+        await tx.auditLog.create({
+          data: {
+            customerId: customer.id,
+            action: "MONTHLY_AD_BUDGET_SMS_SENT",
+            entityType: "Customer",
+            entityId: customer.id,
+            metadata: { month, simulated: result.simulated },
+          },
+        });
+      });
+      sent += 1;
+    } catch {
+      errors += 1;
+    }
+  }
+
+  return { sent, skipped, errors };
 }

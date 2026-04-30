@@ -15,7 +15,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { formatDateTime } from "@/lib/dates";
 import { CalendarCheck } from "lucide-react";
 
-export const metadata = { title: "Appointments — Admin" };
+export const metadata = { title: "Booked Appointments - Admin" };
 
 export default async function AdminAppointmentsPage() {
   const ctx = await requireAdmin();
@@ -24,11 +24,13 @@ export default async function AdminAppointmentsPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Appointments</h1>
-        <p className="text-sm text-muted-foreground">All appointments across customers.</p>
+        <h1 className="text-2xl font-semibold tracking-tight">Booked appointments</h1>
+        <p className="text-sm text-muted-foreground">
+          Estimate appointments across customers. Keep this simple: leads come in, TLM books appointments.
+        </p>
       </div>
       {items.length === 0 ? (
-        <EmptyState icon={CalendarCheck} title="No appointments yet" />
+        <EmptyState icon={CalendarCheck} title="No booked appointments yet" />
       ) : (
         <div className="rounded-md border bg-card">
           <Table>
@@ -39,7 +41,6 @@ export default async function AdminAppointmentsPage() {
                 <TableHead>Service</TableHead>
                 <TableHead>Window</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Billable</TableHead>
                 <TableHead></TableHead>
               </TableRow>
             </TableHeader>
@@ -48,15 +49,14 @@ export default async function AdminAppointmentsPage() {
                 <TableRow key={a.id}>
                   <TableCell className="text-sm">{a.customer.businessName}</TableCell>
                   <TableCell className="text-sm font-medium">
-                    {[a.lead.firstName, a.lead.lastName].filter(Boolean).join(" ") || "—"}
+                    {[a.lead.firstName, a.lead.lastName].filter(Boolean).join(" ") || "-"}
                   </TableCell>
-                  <TableCell className="text-sm">{a.lead.serviceRequested ?? "—"}</TableCell>
+                  <TableCell className="text-sm">{a.lead.serviceRequested ?? "-"}</TableCell>
                   <TableCell className="text-xs">
                     {formatDateTime(a.appointmentWindowStart)}
                   </TableCell>
-                  <TableCell><StatusBadge status={a.status} /></TableCell>
                   <TableCell>
-                    {a.isBillable ? <StatusBadge status="BILLABLE" /> : <StatusBadge status="NOT_BILLABLE" />}
+                    <StatusBadge status={a.status} />
                   </TableCell>
                   <TableCell>
                     <Link

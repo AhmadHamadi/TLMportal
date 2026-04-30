@@ -56,7 +56,7 @@ export default async function CustomerDetailPage({
             <StatusBadge status={customer.status} />
           </div>
           <p className="text-sm text-muted-foreground mt-1">
-            {customer.contactName} · {customer.email} · {formatNational(customer.phone)}
+            {customer.contactName} - {customer.email} - {formatNational(customer.phone)}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -135,26 +135,52 @@ export default async function CustomerDetailPage({
             <Card>
               <CardHeader><CardTitle className="text-sm">Appointment fee</CardTitle></CardHeader>
               <CardContent className="text-2xl font-semibold">
-                {formatMoney(customer.appointmentFee)}
+                {customer.leadEngineEnabled ? formatMoney(customer.appointmentFee) : "Not used"}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader><CardTitle className="text-sm">SEO/GBP retainer</CardTitle></CardHeader>
+              <CardContent className="text-2xl font-semibold">
+                {formatMoney(customer.seoGbpMonthlyRetainer)}
               </CardContent>
             </Card>
             <Card>
               <CardHeader><CardTitle className="text-sm">Monthly ad budget</CardTitle></CardHeader>
               <CardContent className="text-2xl font-semibold">
-                {formatMoney(customer.monthlyAdBudget)}
+                {customer.googleAdsBudgetCurrency} {formatMoney(customer.monthlyAdBudget)}
               </CardContent>
             </Card>
             <Card>
               <CardHeader><CardTitle className="text-sm">Min project size</CardTitle></CardHeader>
               <CardContent className="text-2xl font-semibold">
-                {customer.minProjectSize ? formatMoney(customer.minProjectSize) : "—"}
+                {customer.minProjectSize ? formatMoney(customer.minProjectSize) : "-"}
               </CardContent>
             </Card>
             <Card>
-              <CardHeader><CardTitle className="text-sm">Dispute window</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-sm">Internal review window</CardTitle></CardHeader>
               <CardContent className="text-2xl font-semibold">{customer.disputeWindowHours}h</CardContent>
             </Card>
           </div>
+          <Card>
+            <CardHeader><CardTitle className="text-sm">Active packages</CardTitle></CardHeader>
+            <CardContent className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
+              {[
+                { enabled: customer.leadEngineEnabled, label: "Lead Engine", detail: "Booked estimate workflow + tracking" },
+                { enabled: customer.googleAdsEnabled, label: "Google Ads", detail: "MCC access, spend, conversions" },
+                { enabled: customer.websiteEnabled, label: "Website", detail: "Website or landing page work" },
+                { enabled: customer.localSeoEnabled, label: "Local SEO", detail: "$750/month flat retainer" },
+                { enabled: customer.gbpEnabled, label: "GBP", detail: "Profile, posts, reviews, services" },
+              ].map((pkg) => (
+                <div key={pkg.label} className="rounded-lg border bg-muted/30 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium">{pkg.label}</span>
+                    <StatusBadge status={pkg.enabled ? "ACTIVE" : "INACTIVE"} />
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">{pkg.detail}</p>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
           {customer.notes ? (
             <Card>
               <CardHeader><CardTitle className="text-sm">Notes</CardTitle></CardHeader>
@@ -193,7 +219,7 @@ export default async function CustomerDetailPage({
                   <StatusBadge status={customer.googleAdsLinkStatus} />
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  CID: <span className="font-mono">{customer.googleAdsCustomerId ?? "—"}</span>
+                  CID: <span className="font-mono">{customer.googleAdsCustomerId ?? "-"}</span>
                 </div>
                 <p className="text-xs text-muted-foreground pt-1">
                   Real OAuth/MCC link request lands in Phase 9b. For now, set the CID and link
@@ -217,7 +243,7 @@ export default async function CustomerDetailPage({
             <Card>
               <CardHeader><CardTitle className="text-sm">Industry / niche</CardTitle></CardHeader>
               <CardContent className="space-y-2 text-sm">
-                <div className="font-medium">{customer.industry ?? "—"}</div>
+                <div className="font-medium">{customer.industry ?? "-"}</div>
                 <p className="text-xs text-muted-foreground">
                   Used in onboarding prompts (landing page rebuild brief, ad campaign structure).
                 </p>
@@ -300,7 +326,7 @@ export default async function CustomerDetailPage({
               <li key={a.id} className="flex items-center justify-between px-4 py-2">
                 <div className="flex items-center gap-2">
                   <span className={a.isActive ? "" : "text-muted-foreground line-through"}>
-                    {[a.city, a.neighbourhood].filter(Boolean).join(" — ")}, {a.province}
+                    {[a.city, a.neighbourhood].filter(Boolean).join(" - ")}, {a.province}
                   </span>
                   {!a.isActive ? <StatusBadge status="INACTIVE" /> : null}
                 </div>
@@ -356,7 +382,7 @@ export default async function CustomerDetailPage({
                   <div className="font-medium text-sm">{formatNational(tn.twilioPhoneNumber)}</div>
                   <div className="text-xs text-muted-foreground">
                     forwards to {formatNational(tn.forwardingPhoneNumber)}
-                    {tn.label ? ` · ${tn.label}` : ""}
+                    {tn.label ? ` - ${tn.label}` : ""}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">

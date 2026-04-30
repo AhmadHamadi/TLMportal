@@ -5,10 +5,9 @@ import type { NavItem } from "@/components/shell/sidebar";
 
 const NAV: NavItem[] = [
   { href: "/contractor", label: "Overview", iconKey: "overview" },
-  { href: "/contractor/leads", label: "Leads", iconKey: "leads" },
-  { href: "/contractor/appointments", label: "Appointments", iconKey: "appointments" },
-  { href: "/contractor/billing", label: "Billing", iconKey: "billing" },
-  { href: "/contractor/disputes", label: "Disputes", iconKey: "disputes" },
+  { href: "/contractor/appointments", label: "Calendar", iconKey: "appointments" },
+  { href: "/contractor/calls", label: "Call log", iconKey: "calls" },
+  { href: "/contractor/sms", label: "SMS summary", iconKey: "sms" },
   { href: "/contractor/settings", label: "Settings", iconKey: "settings" },
 ];
 

@@ -16,7 +16,23 @@ import { formatNational } from "@/lib/phone";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Users, Plus } from "lucide-react";
 
-export const metadata = { title: "Customers — Admin" };
+export const metadata = { title: "Customers - Admin" };
+
+function packageSummary(customer: {
+  leadEngineEnabled: boolean;
+  googleAdsEnabled: boolean;
+  websiteEnabled: boolean;
+  localSeoEnabled: boolean;
+  gbpEnabled: boolean;
+}) {
+  return [
+    customer.leadEngineEnabled ? "Lead Engine" : null,
+    customer.googleAdsEnabled ? "Google Ads" : null,
+    customer.websiteEnabled ? "Website" : null,
+    customer.localSeoEnabled ? "SEO" : null,
+    customer.gbpEnabled ? "GBP" : null,
+  ].filter(Boolean).join(", ") || "No package";
+}
 
 export default async function CustomersPage() {
   const ctx = await requireAdmin();
@@ -28,7 +44,7 @@ export default async function CustomersPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Customers</h1>
           <p className="text-sm text-muted-foreground">
-            All contractor customers and their billing config.
+            All contractor customers, packages, and billing config.
           </p>
         </div>
         <Link href="/admin/customers/new" className={buttonVariants()}>
@@ -57,7 +73,9 @@ export default async function CustomersPage() {
                 <TableHead>Contact</TableHead>
                 <TableHead>Phone</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Packages</TableHead>
                 <TableHead className="text-right">Retainer</TableHead>
+                <TableHead className="text-right">SEO/GBP</TableHead>
                 <TableHead className="text-right">Appt fee</TableHead>
                 <TableHead></TableHead>
               </TableRow>
@@ -71,8 +89,14 @@ export default async function CustomersPage() {
                     <div className="text-xs text-muted-foreground">{c.email}</div>
                   </TableCell>
                   <TableCell>{formatNational(c.phone)}</TableCell>
-                  <TableCell><StatusBadge status={c.status} /></TableCell>
+                  <TableCell>
+                    <StatusBadge status={c.status} />
+                  </TableCell>
+                  <TableCell className="max-w-[220px] text-xs text-muted-foreground">
+                    {packageSummary(c)}
+                  </TableCell>
                   <TableCell className="text-right">{formatMoney(c.monthlyRetainer)}</TableCell>
+                  <TableCell className="text-right">{formatMoney(c.seoGbpMonthlyRetainer)}</TableCell>
                   <TableCell className="text-right">{formatMoney(c.appointmentFee)}</TableCell>
                   <TableCell>
                     <Link

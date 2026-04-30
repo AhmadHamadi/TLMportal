@@ -1,4 +1,4 @@
-﻿# Client Onboarding Access Playbook
+# Client Onboarding Access Playbook
 
 This playbook keeps client onboarding simple while preserving ownership and reducing support headaches.
 
@@ -92,7 +92,7 @@ This is a strong future upsell after appointments/jobs are completed.
 
 Safe workflow:
 
-1. Contractor marks estimate/job completed or won.
+1. Contractor marks estimate completed.
 2. System asks contractor whether the customer is appropriate for a review request.
 3. System sends a neutral review request link.
 4. Portal tracks sent/clicked/completed if possible.
