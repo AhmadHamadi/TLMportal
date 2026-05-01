@@ -61,6 +61,18 @@ export default async function CustomerDetailPage({
         </div>
         <div className="flex flex-wrap gap-2">
           <Link
+            href={`/admin/customers/${customer.id}/twilio`}
+            className={buttonVariants({ size: "sm" })}
+          >
+            Twilio setup
+          </Link>
+          <Link
+            href={`/admin/customers/${customer.id}/google-ads`}
+            className={buttonVariants({ size: "sm" })}
+          >
+            Google Ads setup
+          </Link>
+          <Link
             href={`/admin/onboarding/${customer.id}`}
             className={buttonVariants({ variant: "outline", size: "sm" })}
           >

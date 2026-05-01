@@ -3,19 +3,21 @@ import { auth } from "@/auth";
 import { AppShell } from "@/components/shell/app-shell";
 import type { NavGroup } from "@/components/shell/sidebar";
 
+// Admin nav is customer-centric. Global activity feeds (leads / calls / SMS /
+// appointments) are accessible from each customer's detail page rather than
+// surfaced in the top nav, so the agency operator stays focused on per-client
+// work and isn't drowned in a global firehose.
 const NAV: NavGroup[] = [
   {
     label: "Dashboard",
-    items: [{ href: "/admin", label: "Overview", iconKey: "overview" }],
+    items: [
+      { href: "/admin", label: "Overview", iconKey: "overview" },
+      { href: "/admin/customers", label: "Customers", iconKey: "customers" },
+    ],
   },
   {
-    label: "Operations",
+    label: "Quality control",
     items: [
-      { href: "/admin/customers", label: "Customers", iconKey: "customers" },
-      { href: "/admin/leads", label: "Leads", iconKey: "leads" },
-      { href: "/admin/appointments", label: "Appointments", iconKey: "appointments" },
-      { href: "/admin/calls", label: "Calls", iconKey: "calls" },
-      { href: "/admin/sms", label: "SMS", iconKey: "sms" },
       { href: "/admin/disputes", label: "Internal reviews", iconKey: "disputes" },
     ],
   },

@@ -143,16 +143,20 @@ export async function createCustomer(ctx: AuthCtx, input: CustomerCreateInput) {
   const appointmentFee = input.payPerAppointment === "no" ? "0" : input.appointmentFee;
   const seoGbpMonthlyRetainer =
     input.packageSeo || input.packageGbp ? input.seoGbpMonthlyRetainer || "750" : "0";
+  // Sensible defaults so the create form can be minimal (5 fields). Admin
+  // refines forwarding phone on the dedicated Twilio setup page later.
+  const contactName = input.contactName ?? input.businessName;
+  const forwardingPhone = input.forwardingPhone ?? input.phone;
   const notes = buildBusinessModelNote({ ...input, appointmentFee, seoGbpMonthlyRetainer });
   return db.$transaction(async (tx) => {
     const customer = await tx.customer.create({
       data: {
         slug,
         businessName: input.businessName,
-        contactName: input.contactName,
+        contactName,
         email: input.email,
         phone: input.phone,
-        forwardingPhone: input.forwardingPhone,
+        forwardingPhone,
         websiteUrl: input.websiteUrl,
         landingPageUrl: input.landingPageUrl,
         industry: input.industry,

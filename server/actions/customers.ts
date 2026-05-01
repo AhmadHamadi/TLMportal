@@ -54,6 +54,23 @@ export async function updateCustomerAction(
   return { ok: true };
 }
 
+/**
+ * Direct-action variant of updateCustomerAction for inline-save forms that
+ * use the native <form action={...}> pattern (not useActionState). Silently
+ * no-ops on validation failure rather than surfacing errors — use the
+ * useActionState variant when you need to display field errors.
+ */
+export async function updateCustomerInlineAction(formData: FormData): Promise<void> {
+  const ctx = await requireAdmin();
+  const parsed = customerUpdateSchema.safeParse(fd(formData));
+  if (!parsed.success) return;
+  await updateCustomer(ctx, parsed.data);
+  revalidatePath(`/admin/customers/${parsed.data.id}`);
+  revalidatePath(`/admin/customers/${parsed.data.id}/twilio`);
+  revalidatePath(`/admin/customers/${parsed.data.id}/google-ads`);
+  revalidatePath("/admin/customers");
+}
+
 export async function deleteCustomerAction(formData: FormData): Promise<void> {
   const ctx = await requireAdmin();
   const id = String(formData.get("id"));

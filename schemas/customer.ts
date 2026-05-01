@@ -12,10 +12,13 @@ const checkboxBool = z.preprocess((value) => value === "on" || value === "true",
 
 export const customerCreateSchema = z.object({
   businessName: z.string().min(2, "Business name required"),
-  contactName: z.string().min(2, "Contact name required"),
+  // Optional on create: defaults to businessName at the service layer.
+  contactName: z.string().min(2).optional(),
   email: z.string().email("Valid email required").transform((s) => s.toLowerCase()),
   phone: phoneE164,
-  forwardingPhone: phoneE164,
+  // Optional on create: defaults to `phone` at the service layer. Admin
+  // configures the real forwarding number on the dedicated Twilio setup page.
+  forwardingPhone: phoneE164.optional(),
   websiteUrl: optionalString,
   landingPageUrl: optionalString,
   industry: optionalString,
@@ -23,7 +26,7 @@ export const customerCreateSchema = z.object({
   twilioMessagingServiceSid: optionalString,
   initialServices: optionalString,
   payPerAppointment: z.enum(["yes", "no"]).default("yes"),
-  packageLeadEngine: checkboxBool.default(false),
+  packageLeadEngine: checkboxBool.default(true),
   packageWebsite: checkboxBool.default(false),
   packageSeo: checkboxBool.default(false),
   packageGbp: checkboxBool.default(false),

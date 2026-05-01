@@ -56,9 +56,93 @@ export function CustomerForm({ customer }: { customer?: Customer }) {
     undefined,
   );
 
+  // CREATE MODE — minimal 5-field form. Admin fills Twilio / Google Ads /
+  // packages / fees details on dedicated setup pages after creation.
+  if (!editing) {
+    return (
+      <form action={formAction} className="space-y-5 max-w-xl">
+        <div className="space-y-1.5">
+          <Label htmlFor="businessName">Business name</Label>
+          <Input
+            id="businessName"
+            name="businessName"
+            required
+            placeholder="Atlas Concrete"
+            autoFocus
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            required
+            placeholder="contact@atlasconcrete.com"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="phone">Phone number</Label>
+          <Input
+            id="phone"
+            name="phone"
+            required
+            placeholder="(416) 555-0100"
+          />
+          <p className="text-xs text-muted-foreground">
+            Used as the contact phone and the default call-forwarding number.
+            You can change forwarding later on the Twilio setup page.
+          </p>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="setupFee">Setup fee</Label>
+            <Input
+              id="setupFee"
+              name="setupFee"
+              type="number"
+              step="0.01"
+              min="0"
+              defaultValue="0"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="monthlyRetainer">Monthly retainer</Label>
+            <Input
+              id="monthlyRetainer"
+              name="monthlyRetainer"
+              type="number"
+              step="0.01"
+              min="0"
+              defaultValue="0"
+            />
+          </div>
+        </div>
+
+        {state && state.ok === false ? (
+          <Alert variant="destructive">
+            <AlertDescription>{state.error}</AlertDescription>
+          </Alert>
+        ) : null}
+
+        <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
+          After creating, you&rsquo;ll go to the customer page to set up Google Ads, the Twilio
+          tracking number, services, areas, contracts, and packages — one focused page each.
+        </div>
+
+        <div className="flex gap-2">
+          <Button type="submit" disabled={pending}>
+            {pending ? "Creating..." : "Create customer"}
+          </Button>
+        </div>
+      </form>
+    );
+  }
+
+  // EDIT MODE — full form with everything, for fine-tuning later.
   return (
     <form action={formAction} className="space-y-6 max-w-3xl">
-      {customer?.id ? <input type="hidden" name="id" value={customer.id} /> : null}
+      <input type="hidden" name="id" value={customer!.id} />
 
       <section className="space-y-4">
         <h3 className="text-sm font-medium text-muted-foreground">Business</h3>
@@ -69,7 +153,7 @@ export function CustomerForm({ customer }: { customer?: Customer }) {
           </div>
           <div>
             <Label htmlFor="contactName">Contact person</Label>
-            <Input id="contactName" name="contactName" defaultValue={customer?.contactName} required />
+            <Input id="contactName" name="contactName" defaultValue={customer?.contactName} />
           </div>
           <div>
             <Label htmlFor="email">Email</Label>
@@ -85,7 +169,6 @@ export function CustomerForm({ customer }: { customer?: Customer }) {
               id="forwardingPhone"
               name="forwardingPhone"
               defaultValue={customer?.forwardingPhone}
-              required
               placeholder="+14165550100"
             />
           </div>
@@ -130,92 +213,51 @@ export function CustomerForm({ customer }: { customer?: Customer }) {
               defaultValue={customer?.landingPageUrl ?? ""}
             />
           </div>
-          <div>
-            <Label htmlFor="googleAdsCustomerId">Google Ads customer ID</Label>
-            <Input
-              id="googleAdsCustomerId"
-              name="googleAdsCustomerId"
-              defaultValue={customer?.googleAdsCustomerId ?? ""}
-              placeholder="123-456-7890"
-            />
-          </div>
-          <div>
-            <Label htmlFor="twilioMessagingServiceSid">Twilio Messaging Service SID</Label>
-            <Input
-              id="twilioMessagingServiceSid"
-              name="twilioMessagingServiceSid"
-              defaultValue={customer?.twilioMessagingServiceSid ?? ""}
-              placeholder="MGxxxxxxxxxx (per-customer override)"
-            />
-          </div>
         </div>
       </section>
 
       <section className="space-y-4">
-        <h3 className="text-sm font-medium text-muted-foreground">Services sold</h3>
+        <h3 className="text-sm font-medium text-muted-foreground">Packages</h3>
+        <p className="text-xs text-muted-foreground">
+          Connect Google Ads or provision a Twilio number on the dedicated setup pages from the
+          customer detail view.
+        </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <label className="flex items-start gap-2 rounded-md border bg-card p-3 text-sm">
-            <input
-              type="checkbox"
-              name="packageLeadEngine"
-              defaultChecked={customer?.leadEngineEnabled ?? !editing}
-              className="mt-1"
-            />
+            <input type="checkbox" name="packageLeadEngine" defaultChecked={customer?.leadEngineEnabled ?? true} className="mt-1" />
             <span>
               <span className="font-medium">Lead Engine</span>
-              <span className="block text-xs text-muted-foreground">
-                Ads, landing page, tracking number, SMS follow-up, booked estimate workflow.
-              </span>
+              <span className="block text-xs text-muted-foreground">Tracking number, SMS, booked appointments.</span>
             </span>
           </label>
           <label className="flex items-start gap-2 rounded-md border bg-card p-3 text-sm">
-            <input type="checkbox" name="packageGoogleAds" defaultChecked={customer?.googleAdsEnabled ?? !editing} className="mt-1" />
+            <input type="checkbox" name="packageGoogleAds" defaultChecked={customer?.googleAdsEnabled ?? false} className="mt-1" />
             <span>
               <span className="font-medium">Google Ads management</span>
-              <span className="block text-xs text-muted-foreground">
-                Manager account access, conversion tracking, spend reporting.
-              </span>
+              <span className="block text-xs text-muted-foreground">MCC link, conversion tracking, spend.</span>
             </span>
           </label>
           <label className="flex items-start gap-2 rounded-md border bg-card p-3 text-sm">
             <input type="checkbox" name="packageWebsite" defaultChecked={customer?.websiteEnabled ?? false} className="mt-1" />
             <span>
               <span className="font-medium">Website / landing page</span>
-              <span className="block text-xs text-muted-foreground">
-                New website, landing page rebuild, domain/DNS coordination.
-              </span>
+              <span className="block text-xs text-muted-foreground">New build or rebuild.</span>
             </span>
           </label>
           <label className="flex items-start gap-2 rounded-md border bg-card p-3 text-sm">
             <input type="checkbox" name="packageSeo" defaultChecked={customer?.localSeoEnabled ?? false} className="mt-1" />
             <span>
               <span className="font-medium">Local SEO</span>
-              <span className="block text-xs text-muted-foreground">
-                Flat $750/month local SEO retainer. Results compound over months; not billed per booked appointment.
-              </span>
+              <span className="block text-xs text-muted-foreground">$750/mo flat retainer.</span>
             </span>
           </label>
           <label className="flex items-start gap-2 rounded-md border bg-card p-3 text-sm">
             <input type="checkbox" name="packageGbp" defaultChecked={customer?.gbpEnabled ?? false} className="mt-1" />
             <span>
               <span className="font-medium">Google Business Profile</span>
-              <span className="block text-xs text-muted-foreground">
-                GBP management included in the $750/month SEO/GBP retainer when selected with Local SEO.
-              </span>
+              <span className="block text-xs text-muted-foreground">Bundled with Local SEO retainer.</span>
             </span>
           </label>
-        </div>
-        <div>
-          <Label htmlFor="initialServices">Contractor services offered</Label>
-          <Textarea
-            id="initialServices"
-            name="initialServices"
-            rows={3}
-            placeholder="Concrete driveway, patio, walkway, garage pad..."
-          />
-          <p className="mt-1 text-xs text-muted-foreground">
-            Add one per line or comma-separated. These seed the customer&apos;s service list.
-          </p>
         </div>
       </section>
 
@@ -226,7 +268,7 @@ export function CustomerForm({ customer }: { customer?: Customer }) {
             <Label htmlFor="payPerAppointment">Booked appointment billing</Label>
             <Select
               name="payPerAppointment"
-              defaultValue={editing ? (Number(customer?.appointmentFee ?? "0") > 0 ? "yes" : "no") : "yes"}
+              defaultValue={Number(customer?.appointmentFee ?? "0") > 0 ? "yes" : "no"}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -236,69 +278,31 @@ export function CustomerForm({ customer }: { customer?: Customer }) {
                 <SelectItem value="no">Retainer only / no appointment fee</SelectItem>
               </SelectContent>
             </Select>
-            <p className="mt-1 text-xs text-muted-foreground">
-              If set to no, the appointment fee is saved as $0 and billing stays retainer-only.
-            </p>
           </div>
           <div>
             <Label htmlFor="setupFee">Setup fee</Label>
-            <Input
-              id="setupFee"
-              name="setupFee"
-              type="number"
-              step="0.01"
-              defaultValue={customer?.setupFee ?? "0"}
-            />
+            <Input id="setupFee" name="setupFee" type="number" step="0.01" defaultValue={customer?.setupFee ?? "0"} />
           </div>
           <div>
             <Label htmlFor="monthlyRetainer">Monthly retainer</Label>
-            <Input
-              id="monthlyRetainer"
-              name="monthlyRetainer"
-              type="number"
-              step="0.01"
-              defaultValue={customer?.monthlyRetainer ?? "0"}
-            />
+            <Input id="monthlyRetainer" name="monthlyRetainer" type="number" step="0.01" defaultValue={customer?.monthlyRetainer ?? "0"} />
           </div>
           <div>
             <Label htmlFor="appointmentFee">Appointment fee</Label>
-            <Input
-              id="appointmentFee"
-              name="appointmentFee"
-              type="number"
-              step="0.01"
-              defaultValue={customer?.appointmentFee ?? "0"}
-            />
+            <Input id="appointmentFee" name="appointmentFee" type="number" step="0.01" defaultValue={customer?.appointmentFee ?? "0"} />
           </div>
           <div>
-            <Label htmlFor="seoGbpMonthlyRetainer">SEO/GBP monthly retainer</Label>
-            <Input
-              id="seoGbpMonthlyRetainer"
-              name="seoGbpMonthlyRetainer"
-              type="number"
-              step="0.01"
-              defaultValue={customer?.seoGbpMonthlyRetainer ?? "750"}
-            />
-            <p className="mt-1 text-xs text-muted-foreground">
-              Use $750/month for SEO/GBP. Keep this separate from booked appointment fees.
-            </p>
+            <Label htmlFor="seoGbpMonthlyRetainer">SEO/GBP retainer</Label>
+            <Input id="seoGbpMonthlyRetainer" name="seoGbpMonthlyRetainer" type="number" step="0.01" defaultValue={customer?.seoGbpMonthlyRetainer ?? "750"} />
           </div>
           <div>
             <Label htmlFor="monthlyAdBudget">Monthly ad budget</Label>
-            <Input
-              id="monthlyAdBudget"
-              name="monthlyAdBudget"
-              type="number"
-              step="0.01"
-              defaultValue={customer?.monthlyAdBudget ?? "0"}
-            />
+            <Input id="monthlyAdBudget" name="monthlyAdBudget" type="number" step="0.01" defaultValue={customer?.monthlyAdBudget ?? "0"} />
           </div>
           <div>
             <Label htmlFor="googleAdsBudgetCurrency">Ad budget currency</Label>
             <Select name="googleAdsBudgetCurrency" defaultValue={customer?.googleAdsBudgetCurrency ?? "CAD"}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
+              <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="CAD">CAD</SelectItem>
                 <SelectItem value="USD">USD</SelectItem>
@@ -307,25 +311,11 @@ export function CustomerForm({ customer }: { customer?: Customer }) {
           </div>
           <div>
             <Label htmlFor="minProjectSize">Minimum project size</Label>
-            <Input
-              id="minProjectSize"
-              name="minProjectSize"
-              type="number"
-              step="0.01"
-              defaultValue={customer?.minProjectSize ?? ""}
-              placeholder="optional"
-            />
+            <Input id="minProjectSize" name="minProjectSize" type="number" step="0.01" defaultValue={customer?.minProjectSize ?? ""} placeholder="optional" />
           </div>
           <div>
             <Label htmlFor="disputeWindowHours">Internal review window (hours)</Label>
-            <Input
-              id="disputeWindowHours"
-              name="disputeWindowHours"
-              type="number"
-              min={1}
-              max={168}
-              defaultValue={customer?.disputeWindowHours ?? 48}
-            />
+            <Input id="disputeWindowHours" name="disputeWindowHours" type="number" min={1} max={168} defaultValue={customer?.disputeWindowHours ?? 48} />
           </div>
         </div>
       </section>
@@ -343,7 +333,7 @@ export function CustomerForm({ customer }: { customer?: Customer }) {
 
       <div className="flex gap-2">
         <Button type="submit" disabled={pending}>
-          {pending ? "Saving..." : editing ? "Save changes" : "Create customer"}
+          {pending ? "Saving..." : "Save changes"}
         </Button>
       </div>
     </form>

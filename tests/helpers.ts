@@ -16,8 +16,10 @@ export async function getSeededCustomers() {
 }
 
 export async function getSeededUsers() {
+  // Look up admin by role rather than a fixed email so tests stay green
+  // even when the admin handle is changed via scripts/set-admin-credentials.
   const [admin, atlasUser, northsideUser] = await Promise.all([
-    testDb.user.findUnique({ where: { email: "admin@tlm.local" } }),
+    testDb.user.findFirst({ where: { role: "ADMIN" }, orderBy: { createdAt: "asc" } }),
     testDb.user.findUnique({ where: { email: "anthony@atlasconcrete.example" } }),
     testDb.user.findUnique({ where: { email: "marcus@northsideinterlock.example" } }),
   ]);
