@@ -106,7 +106,7 @@ Read docs/CLIENT_ONBOARDING_ACCESS.md before changing contractor account setup, 
 Read docs/LEAD_VISIBILITY_BILLING_POLICY.md before changing contractor lead lists, lead detail pages, appointment billing, call tracking, or contact reveal rules.
 
 ## Agency Workflow Research
-Read docs/AGENCY_WORKFLOW_RESEARCH.md before changing admin dashboard priorities, lead qualification workflow, reporting, or pay-per-appointment policy. Avoid HomeAdvisor-style overclaims: separate raw leads, qualified leads, booked appointments, billable appointments, disputes, and won jobs.
+Read docs/AGENCY_WORKFLOW_RESEARCH.md before changing admin dashboard priorities, lead qualification workflow, reporting, or pay-per-appointment policy. Avoid HomeAdvisor-style overclaims. Client-facing reports should stay simple: leads, calls, SMS follow-up, booked appointments, and ad spend. Keep billing/internal review states admin-only.
 
 ## Known Future Work
 - Real Google Ads API integration to replace manual spend entry and budget updates.
