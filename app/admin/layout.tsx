@@ -20,6 +20,8 @@ const NAV: NavGroup[] = [
     items: [
       { href: "/admin/twilio", label: "Twilio", iconKey: "calls" },
       { href: "/admin/google-ads", label: "Google Ads", iconKey: "spend" },
+      { href: "/admin/google-business-profile", label: "Business Profile", iconKey: "gbp" },
+      { href: "/admin/google-search-console", label: "Search Console", iconKey: "search" },
     ],
   },
   {

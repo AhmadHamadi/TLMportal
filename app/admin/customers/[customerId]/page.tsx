@@ -1,30 +1,29 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
-import { StatusBadge } from "@/components/shared/status-badge";
+import { db } from "@/lib/db";
 import { getCustomerById } from "@/server/services/customers";
 import { requireAdmin } from "@/lib/auth-guard";
+import { Card, CardContent } from "@/components/ui/card";
+import { buttonVariants } from "@/components/ui/button";
+import { StatusBadge } from "@/components/shared/status-badge";
 import { formatMoney } from "@/lib/money";
+import { formatDate, startOfMonth } from "@/lib/dates";
 import { formatNational } from "@/lib/phone";
 import {
-  addServiceAction,
-  toggleServiceAction,
-  deleteServiceAction,
-  addServiceAreaAction,
-  toggleServiceAreaAction,
-  deleteServiceAreaAction,
-  deleteCustomerAction,
-} from "@/server/actions/customers";
-import { InviteUserForm } from "@/components/customers/invite-user-form";
-import { ProvisionTrackingNumberForm } from "@/components/customers/provision-tracking-number-form";
-import { releaseTrackingNumberAction } from "@/server/actions/tracking-numbers";
-import { StartSubscriptionButton } from "@/components/billing/stripe-customer-actions";
-import { ContractsTab } from "@/components/contracts/contracts-tab";
-import { OnboardingTab } from "@/components/onboarding/onboarding-tab";
-import { db } from "@/lib/db";
+  Phone,
+  MapPin,
+  Search,
+  Inbox,
+  CalendarCheck,
+  Receipt,
+  CheckCircle2,
+  Circle,
+  Sparkles,
+  FileText,
+  ChevronRight,
+  Settings as SettingsIcon,
+  ExternalLink,
+} from "lucide-react";
 
 export default async function CustomerDetailPage({
   params,
@@ -35,43 +34,65 @@ export default async function CustomerDetailPage({
   const ctx = await requireAdmin();
   const customer = await getCustomerById(ctx, customerId);
   if (!customer) notFound();
-  const [subscription, contracts, onboardingItems] = await Promise.all([
-    db.stripeSubscription.findUnique({ where: { customerId: customer.id } }),
-    db.contract.findMany({
-      where: { customerId: customer.id },
-      orderBy: [{ status: "asc" }, { createdAt: "desc" }],
-    }),
-    db.onboardingItem.findMany({
-      where: { customerId: customer.id },
-      orderBy: [{ status: "asc" }, { createdAt: "asc" }],
-    }),
-  ]);
+
+  const monthStart = startOfMonth();
+  const [leadsThisMonth, callsThisMonth, billableAppts, recentLeads, billing] =
+    await Promise.all([
+      db.lead.count({
+        where: { customerId, createdAt: { gte: monthStart }, deletedAt: null },
+      }),
+      db.callLog.count({ where: { customerId, createdAt: { gte: monthStart } } }),
+      db.appointment.count({
+        where: { customerId, createdAt: { gte: monthStart }, isBillable: true },
+      }),
+      db.lead.findMany({
+        where: { customerId, deletedAt: null },
+        orderBy: { createdAt: "desc" },
+        take: 6,
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          serviceRequested: true,
+          source: true,
+          status: true,
+          createdAt: true,
+        },
+      }),
+      db.billingRecord.aggregate({
+        where: {
+          customerId,
+          billingMonth: `${monthStart.getUTCFullYear()}-${String(monthStart.getUTCMonth() + 1).padStart(2, "0")}`,
+          status: { in: ["PAID", "INVOICED", "APPROVED"] },
+        },
+        _sum: { amount: true },
+      }),
+    ]);
+
+  const billingThisMonth = billing._sum.amount?.toString() ?? "0";
+
+  const packages: { label: string; on: boolean }[] = [
+    { label: "Lead Engine", on: customer.leadEngineEnabled },
+    { label: "Google Ads", on: customer.googleAdsEnabled },
+    { label: "Website / landing page", on: customer.websiteEnabled },
+    { label: "Local SEO", on: customer.localSeoEnabled },
+    { label: "Google Business Profile", on: customer.gbpEnabled },
+  ];
 
   return (
     <div className="space-y-6">
+      {/* HEADER --------------------------------------------------- */}
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl font-semibold tracking-tight">{customer.businessName}</h1>
             <StatusBadge status={customer.status} />
           </div>
           <p className="text-sm text-muted-foreground mt-1">
-            {customer.contactName} - {customer.email} - {formatNational(customer.phone)}
+            {customer.contactName} · {customer.email} · {formatNational(customer.phone)}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Link
-            href={`/admin/customers/${customer.id}/twilio`}
-            className={buttonVariants({ size: "sm" })}
-          >
-            Twilio setup
-          </Link>
-          <Link
-            href={`/admin/customers/${customer.id}/google-ads`}
-            className={buttonVariants({ size: "sm" })}
-          >
-            Google Ads setup
-          </Link>
+        <div className="flex items-center gap-2">
           <Link
             href={`/admin/onboarding/${customer.id}`}
             className={buttonVariants({ variant: "outline", size: "sm" })}
@@ -79,350 +100,284 @@ export default async function CustomerDetailPage({
             Onboarding
           </Link>
           <Link
-            href={`/admin/customers/${customer.id}/ad-recommendations`}
-            className={buttonVariants({ variant: "outline", size: "sm" })}
-          >
-            AI ad recos
-          </Link>
-          <Link
-            href={`/admin/reports/${customer.id}/${new Date().toISOString().slice(0, 7)}`}
-            className={buttonVariants({ variant: "outline", size: "sm" })}
-          >
-            Monthly report
-          </Link>
-          <Link
-            href={`/admin/customers/${customer.id}/contract/msa-v1`}
-            className={buttonVariants({ variant: "outline", size: "sm" })}
-          >
-            Generate MSA
-          </Link>
-          <Link
             href={`/admin/customers/${customer.id}/edit`}
             className={buttonVariants({ variant: "outline", size: "sm" })}
           >
+            <SettingsIcon className="h-3.5 w-3.5 mr-1" />
             Edit
           </Link>
-          <form action={deleteCustomerAction}>
-            <input type="hidden" name="id" value={customer.id} />
-            <Button type="submit" variant="destructive" size="sm">
-              Archive
-            </Button>
-          </form>
         </div>
       </div>
 
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="flex-wrap h-auto">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="onboarding">Onboarding</TabsTrigger>
-          <TabsTrigger value="contracts">Contracts</TabsTrigger>
-          <TabsTrigger value="services">Services</TabsTrigger>
-          <TabsTrigger value="areas">Service areas</TabsTrigger>
-          <TabsTrigger value="users">Users</TabsTrigger>
-          <TabsTrigger value="numbers">Tracking + SMS</TabsTrigger>
-        </TabsList>
+      {/* THIS MONTH ----------------------------------------------- */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Stat icon={Inbox} label="Leads" value={leadsThisMonth} />
+        <Stat icon={Phone} label="Calls" value={callsThisMonth} />
+        <Stat icon={CalendarCheck} label="Billable appts" value={billableAppts} />
+        <Stat
+          icon={Receipt}
+          label="Billed this month"
+          value={formatMoney(billingThisMonth)}
+        />
+      </div>
 
-        <TabsContent value="onboarding">
-          <OnboardingTab customerId={customer.id} items={onboardingItems} />
-        </TabsContent>
-
-        <TabsContent value="contracts">
-          <ContractsTab customerId={customer.id} contracts={contracts} />
-        </TabsContent>
-
-        <TabsContent value="overview" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <Card>
-              <CardHeader><CardTitle className="text-sm">Setup fee</CardTitle></CardHeader>
-              <CardContent className="text-2xl font-semibold">
-                {formatMoney(customer.setupFee)}
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader><CardTitle className="text-sm">Monthly retainer</CardTitle></CardHeader>
-              <CardContent className="text-2xl font-semibold">
-                {formatMoney(customer.monthlyRetainer)}
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader><CardTitle className="text-sm">Appointment fee</CardTitle></CardHeader>
-              <CardContent className="text-2xl font-semibold">
-                {customer.leadEngineEnabled ? formatMoney(customer.appointmentFee) : "Not used"}
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader><CardTitle className="text-sm">SEO/GBP retainer</CardTitle></CardHeader>
-              <CardContent className="text-2xl font-semibold">
-                {formatMoney(customer.seoGbpMonthlyRetainer)}
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader><CardTitle className="text-sm">Monthly ad budget</CardTitle></CardHeader>
-              <CardContent className="text-2xl font-semibold">
-                {customer.googleAdsBudgetCurrency} {formatMoney(customer.monthlyAdBudget)}
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader><CardTitle className="text-sm">Min project size</CardTitle></CardHeader>
-              <CardContent className="text-2xl font-semibold">
-                {customer.minProjectSize ? formatMoney(customer.minProjectSize) : "-"}
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader><CardTitle className="text-sm">Internal review window</CardTitle></CardHeader>
-              <CardContent className="text-2xl font-semibold">{customer.disputeWindowHours}h</CardContent>
-            </Card>
+      {/* PACKAGES ------------------------------------------------- */}
+      <Card>
+        <CardContent className="py-4 space-y-3">
+          <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground font-bold">
+            Active packages
           </div>
-          <Card>
-            <CardHeader><CardTitle className="text-sm">Active packages</CardTitle></CardHeader>
-            <CardContent className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
-              {[
-                { enabled: customer.leadEngineEnabled, label: "Lead Engine", detail: "Booked estimate workflow + tracking" },
-                { enabled: customer.googleAdsEnabled, label: "Google Ads", detail: "MCC access, spend, conversions" },
-                { enabled: customer.websiteEnabled, label: "Website", detail: "Website or landing page work" },
-                { enabled: customer.localSeoEnabled, label: "Local SEO", detail: "$750/month flat retainer" },
-                { enabled: customer.gbpEnabled, label: "GBP", detail: "Profile, posts, reviews, services" },
-              ].map((pkg) => (
-                <div key={pkg.label} className="rounded-lg border bg-muted/30 p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium">{pkg.label}</span>
-                    <StatusBadge status={pkg.enabled ? "ACTIVE" : "INACTIVE"} />
-                  </div>
-                  <p className="mt-1 text-xs text-muted-foreground">{pkg.detail}</p>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-          {customer.notes ? (
-            <Card>
-              <CardHeader><CardTitle className="text-sm">Notes</CardTitle></CardHeader>
-              <CardContent className="text-sm whitespace-pre-wrap">{customer.notes}</CardContent>
-            </Card>
-          ) : null}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader><CardTitle className="text-sm">Stripe</CardTitle></CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                {subscription ? (
-                  <>
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground">Status:</span>
-                      <StatusBadge status={subscription.status.toUpperCase()} />
-                    </div>
-                    <div className="text-xs text-muted-foreground font-mono break-all">
-                      {subscription.stripeSubscriptionId}
-                    </div>
-                  </>
+          <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2">
+            {packages.map((p) => (
+              <li
+                key={p.label}
+                className="flex items-center gap-2 text-sm"
+              >
+                {p.on ? (
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
                 ) : (
-                  <>
-                    <p className="text-muted-foreground">
-                      No Stripe subscription yet. Set the monthly retainer first, then start one.
-                    </p>
-                    <StartSubscriptionButton customerId={customer.id} />
-                  </>
+                  <Circle className="h-4 w-4 text-muted-foreground/40 shrink-0" />
                 )}
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader><CardTitle className="text-sm">Google Ads link</CardTitle></CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground">Status:</span>
-                  <StatusBadge status={customer.googleAdsLinkStatus} />
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  CID: <span className="font-mono">{customer.googleAdsCustomerId ?? "-"}</span>
-                </div>
-                <p className="text-xs text-muted-foreground pt-1">
-                  Real OAuth/MCC link request lands in Phase 9b. For now, set the CID and link
-                  status manually in Edit.
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader><CardTitle className="text-sm">Twilio Messaging Service</CardTitle></CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <div className="text-xs text-muted-foreground">
-                  MS SID:{" "}
-                  <span className="font-mono">{customer.twilioMessagingServiceSid ?? "(uses agency default)"}</span>
-                </div>
-                <p className="text-xs text-muted-foreground pt-1">
-                  Per-customer A2P 10DLC isolation: each contractor should have their own Brand
-                  + Campaign → Messaging Service. Set the SID in Edit once provisioned.
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader><CardTitle className="text-sm">Industry / niche</CardTitle></CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <div className="font-medium">{customer.industry ?? "-"}</div>
-                <p className="text-xs text-muted-foreground">
-                  Used in onboarding prompts (landing page rebuild brief, ad campaign structure).
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="services" className="space-y-3">
-          <form action={addServiceAction} className="flex gap-2 max-w-md">
-            <input type="hidden" name="customerId" value={customer.id} />
-            <input
-              type="text"
-              name="name"
-              placeholder="e.g. Concrete driveways"
-              className="flex-1 rounded-md border bg-background px-3 py-1.5 text-sm"
-              required
-            />
-            <Button type="submit" size="sm">Add</Button>
-          </form>
-          <ul className="rounded-md border divide-y bg-card">
-            {customer.services.map((s) => (
-              <li key={s.id} className="flex items-center justify-between px-4 py-2">
-                <div className="flex items-center gap-2">
-                  <span className={s.isActive ? "" : "text-muted-foreground line-through"}>
-                    {s.name}
-                  </span>
-                  {!s.isActive ? <StatusBadge status="INACTIVE" /> : null}
-                </div>
-                <div className="flex gap-2">
-                  <form action={toggleServiceAction}>
-                    <input type="hidden" name="id" value={s.id} />
-                    <input type="hidden" name="customerId" value={customer.id} />
-                    <Button type="submit" variant="ghost" size="sm">
-                      {s.isActive ? "Disable" : "Enable"}
-                    </Button>
-                  </form>
-                  <form action={deleteServiceAction}>
-                    <input type="hidden" name="id" value={s.id} />
-                    <input type="hidden" name="customerId" value={customer.id} />
-                    <Button type="submit" variant="ghost" size="sm">
-                      Remove
-                    </Button>
-                  </form>
-                </div>
+                <span className={p.on ? "" : "text-muted-foreground"}>{p.label}</span>
               </li>
             ))}
-            {customer.services.length === 0 ? (
-              <li className="px-4 py-3 text-sm text-muted-foreground">No services yet.</li>
-            ) : null}
           </ul>
-        </TabsContent>
+        </CardContent>
+      </Card>
 
-        <TabsContent value="areas" className="space-y-3">
-          <form action={addServiceAreaAction} className="flex flex-wrap gap-2 max-w-2xl">
-            <input type="hidden" name="customerId" value={customer.id} />
-            <input
-              type="text"
-              name="city"
-              placeholder="City"
-              className="flex-1 min-w-[140px] rounded-md border bg-background px-3 py-1.5 text-sm"
-              required
-            />
-            <input
-              type="text"
-              name="neighbourhood"
-              placeholder="Neighbourhood (optional)"
-              className="flex-1 min-w-[140px] rounded-md border bg-background px-3 py-1.5 text-sm"
-            />
-            <input
-              type="text"
-              name="province"
-              defaultValue="ON"
-              className="w-16 rounded-md border bg-background px-3 py-1.5 text-sm"
-            />
-            <Button type="submit" size="sm">Add</Button>
-          </form>
-          <ul className="rounded-md border divide-y bg-card">
-            {customer.serviceAreas.map((a) => (
-              <li key={a.id} className="flex items-center justify-between px-4 py-2">
-                <div className="flex items-center gap-2">
-                  <span className={a.isActive ? "" : "text-muted-foreground line-through"}>
-                    {[a.city, a.neighbourhood].filter(Boolean).join(" - ")}, {a.province}
-                  </span>
-                  {!a.isActive ? <StatusBadge status="INACTIVE" /> : null}
-                </div>
-                <div className="flex gap-2">
-                  <form action={toggleServiceAreaAction}>
-                    <input type="hidden" name="id" value={a.id} />
-                    <input type="hidden" name="customerId" value={customer.id} />
-                    <Button type="submit" variant="ghost" size="sm">
-                      {a.isActive ? "Disable" : "Enable"}
-                    </Button>
-                  </form>
-                  <form action={deleteServiceAreaAction}>
-                    <input type="hidden" name="id" value={a.id} />
-                    <input type="hidden" name="customerId" value={customer.id} />
-                    <Button type="submit" variant="ghost" size="sm">
-                      Remove
-                    </Button>
-                  </form>
-                </div>
-              </li>
-            ))}
-            {customer.serviceAreas.length === 0 ? (
-              <li className="px-4 py-3 text-sm text-muted-foreground">No service areas yet.</li>
-            ) : null}
-          </ul>
-        </TabsContent>
-
-        <TabsContent value="users" className="space-y-4">
-          <ul className="rounded-md border divide-y bg-card">
-            {customer.users.map((u) => (
-              <li key={u.id} className="flex items-center justify-between px-4 py-2">
-                <div>
-                  <div className="font-medium text-sm">{u.user.name ?? u.user.email}</div>
-                  <div className="text-xs text-muted-foreground">{u.user.email}</div>
-                </div>
-                <StatusBadge status={u.role} />
-              </li>
-            ))}
-            {customer.users.length === 0 ? (
-              <li className="px-4 py-3 text-sm text-muted-foreground">No users linked.</li>
-            ) : null}
-          </ul>
-          <Separator />
-          <h3 className="text-sm font-medium text-muted-foreground">Invite a contractor user</h3>
-          <InviteUserForm customerId={customer.id} />
-        </TabsContent>
-
-        <TabsContent value="numbers" className="space-y-4">
-          <ul className="rounded-md border divide-y bg-card">
-            {customer.trackingNumbers.map((tn) => (
-              <li key={tn.id} className="flex items-center justify-between px-4 py-2">
-                <div>
-                  <div className="font-medium text-sm">{formatNational(tn.twilioPhoneNumber)}</div>
-                  <div className="text-xs text-muted-foreground">
-                    forwards to {formatNational(tn.forwardingPhoneNumber)}
-                    {tn.label ? ` - ${tn.label}` : ""}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <StatusBadge status={tn.status} />
-                  {tn.status === "ACTIVE" ? (
-                    <form action={releaseTrackingNumberAction}>
-                      <input type="hidden" name="id" value={tn.id} />
-                      <input type="hidden" name="customerId" value={customer.id} />
-                      <Button type="submit" variant="ghost" size="sm">Release</Button>
-                    </form>
-                  ) : null}
-                </div>
-              </li>
-            ))}
-            {customer.trackingNumbers.length === 0 ? (
-              <li className="px-4 py-3 text-sm text-muted-foreground">
-                No tracking numbers assigned yet.
-              </li>
-            ) : null}
-          </ul>
-          <Separator />
-          <h3 className="text-sm font-medium text-muted-foreground">Provision a tracking number</h3>
-          <ProvisionTrackingNumberForm
-            customerId={customer.id}
-            defaultForwardingPhoneNumber={customer.forwardingPhone}
+      {/* INTEGRATIONS GRID ---------------------------------------- */}
+      <div>
+        <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground font-bold mb-2">
+          Integrations
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <IntegrationTile
+            href={`/admin/customers/${customer.id}/twilio`}
+            icon={Phone}
+            label="Twilio"
+            hint={`${customer.trackingNumbers.length} number${customer.trackingNumbers.length === 1 ? "" : "s"}`}
+            color="#F37021"
           />
-        </TabsContent>
-      </Tabs>
+          <IntegrationTile
+            href={`/admin/customers/${customer.id}/google-ads`}
+            icon={() => (
+              <span className="text-[10px] font-bold tracking-wider">ADS</span>
+            )}
+            label="Google Ads"
+            hint={
+              customer.googleAdsCustomerId
+                ? customer.googleAdsCustomerId
+                : "Not linked"
+            }
+            color="#1E55C7"
+          />
+          <IntegrationTile
+            href={`/admin/customers/${customer.id}/google-business-profile`}
+            icon={MapPin}
+            label="Business Profile"
+            hint={customer.gbpEnabled ? "Active" : "Not enabled"}
+            color="#1E8E3E"
+          />
+          <IntegrationTile
+            href={`/admin/customers/${customer.id}/google-search-console`}
+            icon={Search}
+            label="Search Console"
+            hint={customer.websiteUrl ? customer.websiteUrl.replace(/^https?:\/\//, "").replace(/\/$/, "") : "No site set"}
+            color="#4285F4"
+          />
+        </div>
+      </div>
+
+      {/* TOOLS ROW ------------------------------------------------ */}
+      <div>
+        <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground font-bold mb-2">
+          Tools
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <ToolTile
+            href={`/admin/customers/${customer.id}/ad-recommendations`}
+            icon={Sparkles}
+            label="AI ad recommendations"
+            hint="Claude reads landing page + metrics"
+          />
+          <ToolTile
+            href={`/admin/reports/${customer.id}/${new Date().toISOString().slice(0, 7)}`}
+            icon={FileText}
+            label="Monthly report"
+            hint="Branded PDF for the contractor"
+          />
+          <ToolTile
+            href={`/admin/customers/${customer.id}/contract/msa-v1`}
+            icon={FileText}
+            label="Generate MSA"
+            hint="Auto-filled signing copy"
+          />
+        </div>
+      </div>
+
+      {/* RECENT LEADS --------------------------------------------- */}
+      <div>
+        <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground font-bold mb-2">
+          Recent leads
+        </div>
+        <Card>
+          <CardContent className="p-0 divide-y">
+            {recentLeads.length === 0 ? (
+              <div className="px-4 py-6 text-center text-sm text-muted-foreground">
+                No leads yet for this customer.
+              </div>
+            ) : (
+              recentLeads.map((l) => (
+                <Link
+                  key={l.id}
+                  href={`/admin/leads/${l.id}`}
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm truncate">
+                      {[l.firstName, l.lastName].filter(Boolean).join(" ") || "Unnamed lead"}
+                      {l.serviceRequested ? (
+                        <span className="text-muted-foreground font-normal">
+                          {" — "}
+                          {l.serviceRequested}
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="text-[11px] text-muted-foreground">
+                      {l.source.replace(/_/g, " ").toLowerCase()} ·{" "}
+                      {l.status.replace(/_/g, " ").toLowerCase()} · {formatDate(l.createdAt)}
+                    </div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </Link>
+              ))
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* QUICK INFO STRIP ----------------------------------------- */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <InfoCard label="Monthly retainer" value={formatMoney(customer.monthlyRetainer)} />
+        <InfoCard
+          label="Appointment fee"
+          value={
+            customer.leadEngineEnabled && Number(customer.appointmentFee) > 0
+              ? formatMoney(customer.appointmentFee)
+              : "—"
+          }
+        />
+        <InfoCard
+          label="Forwarding phone"
+          value={
+            customer.forwardingPhone ? (
+              <a
+                href={`tel:${customer.forwardingPhone}`}
+                className="text-primary hover:underline inline-flex items-center gap-1"
+              >
+                {formatNational(customer.forwardingPhone)}
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            ) : (
+              "—"
+            )
+          }
+        />
+      </div>
+    </div>
+  );
+}
+
+function Stat({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-md border bg-card p-3 flex items-center justify-between gap-2">
+      <div className="min-w-0">
+        <div className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground font-semibold">
+          {label}
+        </div>
+        <div className="text-base font-bold tabular-nums leading-tight mt-0.5 truncate">
+          {value}
+        </div>
+      </div>
+      <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
+    </div>
+  );
+}
+
+function IntegrationTile({
+  href,
+  icon: Icon,
+  label,
+  hint,
+  color,
+}: {
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  hint: string;
+  color: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="rounded-md border bg-card p-3 hover:border-primary/40 transition-colors flex items-center gap-3"
+    >
+      <div
+        className="shrink-0 h-8 w-8 rounded-md flex items-center justify-center"
+        style={{ background: `${color}1A`, color }}
+      >
+        <Icon className="h-4 w-4" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-semibold truncate">{label}</div>
+        <div className="text-[11px] text-muted-foreground truncate">{hint}</div>
+      </div>
+      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+    </Link>
+  );
+}
+
+function ToolTile({
+  href,
+  icon: Icon,
+  label,
+  hint,
+}: {
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  hint: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="rounded-md border bg-card p-3 hover:border-primary/40 transition-colors flex items-center gap-3"
+    >
+      <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-medium truncate">{label}</div>
+        <div className="text-[11px] text-muted-foreground truncate">{hint}</div>
+      </div>
+      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+    </Link>
+  );
+}
+
+function InfoCard({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="rounded-md border bg-card p-3">
+      <div className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground font-semibold">
+        {label}
+      </div>
+      <div className="mt-1 text-sm font-semibold">{value}</div>
     </div>
   );
 }

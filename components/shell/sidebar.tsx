@@ -21,6 +21,8 @@ import {
   Sparkles,
   FileSignature,
   BookOpen,
+  MapPin,
+  Search,
 } from "lucide-react";
 
 export const ICONS = {
@@ -40,6 +42,8 @@ export const ICONS = {
   ai: Sparkles,
   contracts: FileSignature,
   prompts: BookOpen,
+  gbp: MapPin,
+  search: Search,
 } as const;
 
 export type IconKey = keyof typeof ICONS;
