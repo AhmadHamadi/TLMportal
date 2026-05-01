@@ -84,6 +84,98 @@ export function evaluateBillable(input: BillableInputs): BillableEvaluation {
   return { isBillable: true };
 }
 
+/**
+ * Agency-level revenue snapshot for /admin/billing — what's the agency
+ * actually making this month, and how does that compare to the leads we're
+ * generating? This is profit-side data, not customer-side.
+ */
+export async function agencyRevenueStats(ctx: AuthCtx) {
+  if (ctx.role !== "ADMIN") throw new ForbiddenError();
+  const monthStart = startOfMonth();
+  const month = billingMonthKey();
+
+  const [
+    activeCustomers,
+    contractedMRRAgg,
+    paidRetainerThisMonth,
+    paidAppointmentFeesThisMonth,
+    pendingThisMonth,
+    leadsThisMonth,
+    leadsLastMonth,
+    confirmedThisMonth,
+    billableThisMonth,
+  ] = await Promise.all([
+    db.customer.count({ where: { deletedAt: null, status: "ACTIVE" } }),
+    // Contracted MRR = sum of monthly retainer + SEO/GBP retainer across all
+    // ACTIVE customers, regardless of whether Stripe has actually invoiced.
+    // This is what we EXPECT to bill every month.
+    db.customer.aggregate({
+      where: { deletedAt: null, status: "ACTIVE" },
+      _sum: { monthlyRetainer: true, seoGbpMonthlyRetainer: true },
+    }),
+    // Actual paid this month — what's already in Stripe / cash.
+    db.billingRecord.aggregate({
+      where: { billingMonth: month, type: "MONTHLY_RETAINER", status: "PAID" },
+      _sum: { amount: true },
+    }),
+    db.billingRecord.aggregate({
+      where: { billingMonth: month, type: "APPOINTMENT_FEE", status: { in: ["PAID", "INVOICED"] } },
+      _sum: { amount: true },
+    }),
+    db.billingRecord.aggregate({
+      where: { billingMonth: month, status: { in: ["PENDING", "APPROVED"] } },
+      _sum: { amount: true },
+    }),
+    db.lead.count({ where: { createdAt: { gte: monthStart }, deletedAt: null } }),
+    db.lead.count({
+      where: {
+        createdAt: {
+          gte: new Date(Date.UTC(monthStart.getUTCFullYear(), monthStart.getUTCMonth() - 1, 1)),
+          lt: monthStart,
+        },
+        deletedAt: null,
+      },
+    }),
+    db.appointment.count({
+      where: { createdAt: { gte: monthStart }, status: { in: ["CONFIRMED", "ACCEPTED"] } },
+    }),
+    db.appointment.count({
+      where: { createdAt: { gte: monthStart }, isBillable: true },
+    }),
+  ]);
+
+  const contractedMRR =
+    Number(contractedMRRAgg._sum.monthlyRetainer?.toString() ?? "0") +
+    Number(contractedMRRAgg._sum.seoGbpMonthlyRetainer?.toString() ?? "0");
+  const paidRetainer = Number(paidRetainerThisMonth._sum.amount?.toString() ?? "0");
+  const paidAppointmentFees = Number(paidAppointmentFeesThisMonth._sum.amount?.toString() ?? "0");
+  const totalRevenue = paidRetainer + paidAppointmentFees;
+  const pending = Number(pendingThisMonth._sum.amount?.toString() ?? "0");
+  const leadsDelta =
+    leadsLastMonth > 0
+      ? ((leadsThisMonth - leadsLastMonth) / leadsLastMonth) * 100
+      : leadsThisMonth > 0
+        ? 100
+        : 0;
+  const revenuePerLead = leadsThisMonth > 0 ? totalRevenue / leadsThisMonth : 0;
+
+  return {
+    month,
+    activeCustomers,
+    contractedMRR: contractedMRR.toFixed(2),
+    paidRetainer: paidRetainer.toFixed(2),
+    paidAppointmentFees: paidAppointmentFees.toFixed(2),
+    totalRevenue: totalRevenue.toFixed(2),
+    pending: pending.toFixed(2),
+    leadsThisMonth,
+    leadsLastMonth,
+    leadsDeltaPct: leadsDelta.toFixed(0),
+    confirmedThisMonth,
+    billableThisMonth,
+    revenuePerLead: revenuePerLead.toFixed(2),
+  };
+}
+
 export async function listBillingRecords(ctx: AuthCtx) {
   const tenant = withTenantWhere(ctx);
   return db.billingRecord.findMany({

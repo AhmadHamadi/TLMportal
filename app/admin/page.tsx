@@ -1,127 +1,192 @@
 import Link from "next/link";
-import { adminOverviewStats } from "@/server/services/billing";
-import { requireAdmin } from "@/lib/auth-guard";
 import { db } from "@/lib/db";
-import { StatCard } from "@/components/shared/stat-card";
+import { agencyRevenueStats } from "@/server/services/billing";
+import { listCustomers } from "@/server/services/customers";
+import { requireAdmin } from "@/lib/auth-guard";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { formatDateTime } from "@/lib/dates";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { buttonVariants } from "@/components/ui/button";
+import { formatMoney } from "@/lib/money";
+import { startOfMonth } from "@/lib/dates";
 import {
+  Plus,
   Users,
   UserCheck,
-  Inbox,
-  CalendarCheck,
-  Phone,
-  FileText,
-  DollarSign,
-  MessageSquare,
-  Hash,
-  ClipboardCheck,
-  LineChart,
   ChevronRight,
-  type LucideIcon,
+  Phone,
+  Inbox,
+  Sparkles,
+  DollarSign,
 } from "lucide-react";
-import { formatMoney } from "@/lib/money";
 
-export const metadata = { title: "Overview - Admin" };
-
-const opsLinks: { href: string; label: string; description: string; icon: LucideIcon }[] = [
-  { href: "/admin/leads", label: "Leads", description: "Review new forms, calls, SMS replies, and follow-up.", icon: Inbox },
-  { href: "/admin/calls", label: "Call tracking", description: "Audit call status, missed calls, and text-back recovery.", icon: Phone },
-  { href: "/admin/sms", label: "SMS inbox", description: "Monitor lead availability, contractor replies, and follow-up.", icon: MessageSquare },
-  { href: "/admin/appointments", label: "Booked appointments", description: "See requested, accepted, and confirmed estimate appointments.", icon: CalendarCheck },
-  { href: "/admin/disputes", label: "Internal reviews", description: "Review spam, wrong-number, bad-fit, or billing-credit concerns.", icon: ClipboardCheck },
-  { href: "/admin/customers", label: "Customer onboarding", description: "Services, areas, contracts, Google access, tracking numbers.", icon: Users },
-  { href: "/admin/tracking-numbers", label: "Tracking numbers", description: "Provision Twilio numbers and verify forwarding.", icon: Hash },
-  { href: "/admin/reports", label: "Reports", description: "Show clients leads, calls, booked appointments, spend, and ROI.", icon: LineChart },
-];
+export const metadata = { title: "Overview — Admin" };
 
 export default async function AdminOverviewPage() {
   const ctx = await requireAdmin();
-  const [stats, notifications] = await Promise.all([
-    adminOverviewStats(ctx),
-    db.notification.findMany({
-      where: { status: "UNREAD" },
-      orderBy: { createdAt: "desc" },
-      take: 6,
-      include: { customer: { select: { businessName: true } } },
+  const monthStart = startOfMonth();
+
+  const [revenue, customers, perCustomerActivity] = await Promise.all([
+    agencyRevenueStats(ctx),
+    listCustomers(ctx),
+    db.lead.groupBy({
+      by: ["customerId"],
+      where: { createdAt: { gte: monthStart }, deletedAt: null },
+      _count: true,
     }),
   ]);
 
+  const leadsByCustomer = new Map(
+    perCustomerActivity.map((row) => [row.customerId, row._count]),
+  );
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Agency command center</h1>
-        <p className="text-sm text-muted-foreground">
-          Track leads, book estimate appointments, recover missed calls, and prove results for every contractor.
-        </p>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Total customers" value={stats.totalCustomers} icon={Users} />
-        <StatCard label="Active customers" value={stats.activeCustomers} icon={UserCheck} />
-        <StatCard label="Leads this month" value={stats.leadsThisMonth} icon={Inbox} />
-        <StatCard label="Forms this month" value={stats.formsThisMonth} icon={FileText} />
-        <StatCard label="Calls this month" value={stats.callsThisMonth} icon={Phone} />
-        <StatCard label="Booked appts" value={stats.confirmedThisMonth} icon={CalendarCheck} />
-        <StatCard label="MRR (retainers)" value={formatMoney(stats.monthlyRevenue)} icon={DollarSign} />
-        <StatCard label="Appointment fees" value={formatMoney(stats.appointmentFeeRevenue)} icon={DollarSign} />
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Customers</h1>
+          <p className="text-sm text-muted-foreground">
+            Open a customer to manage their leads, calls, SMS, billing, and integrations.
+          </p>
+        </div>
+        <Link href="/admin/customers/new" className={buttonVariants()}>
+          <Plus className="h-4 w-4 mr-2" /> New customer
+        </Link>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ClipboardCheck className="h-4 w-4 text-muted-foreground" />
-            Daily operating hub
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {opsLinks.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Link key={item.href} href={item.href} className="group flex items-start gap-3 rounded-lg border bg-background p-3 transition hover:bg-muted/70">
-                  <Icon className="mt-0.5 h-4 w-4 text-muted-foreground" />
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-medium">{item.label}</span>
-                    <span className="mt-0.5 block text-xs text-muted-foreground">{item.description}</span>
-                  </span>
-                  <ChevronRight className="mt-0.5 h-4 w-4 text-muted-foreground transition group-hover:translate-x-0.5" />
-                </Link>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+      {/* Quiet stats strip — agency-side numbers, not customer feeds */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <Mini label="Customers" value={revenue.activeCustomers} icon={Users} />
+        <Mini
+          label="Leads this month"
+          value={revenue.leadsThisMonth}
+          icon={Inbox}
+          accent
+        />
+        <Mini
+          label="Contracted MRR"
+          value={formatMoney(revenue.contractedMRR)}
+          icon={DollarSign}
+        />
+        <Mini
+          label="Collected"
+          value={formatMoney(revenue.totalRevenue)}
+          icon={UserCheck}
+        />
+      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Admin notifications</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {notifications.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No unread admin notifications.</p>
-          ) : (
-            <div className="space-y-3">
-              {notifications.map((notification) => (
-                <Link
-                  key={notification.id}
-                  href={notification.link ?? "/admin"}
-                  className="block rounded-lg border bg-background p-3 transition hover:bg-muted/70"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="font-medium">{notification.title}</p>
-                    <StatusBadge status={notification.category} />
+      {/* Customer cards — primary surface */}
+      {customers.length === 0 ? (
+        <Card>
+          <CardContent className="py-10 text-center space-y-3">
+            <Users className="h-8 w-8 text-muted-foreground mx-auto" />
+            <h3 className="text-base font-medium">No customers yet</h3>
+            <p className="text-sm text-muted-foreground max-w-md mx-auto">
+              Add your first contractor customer to start tracking leads.
+            </p>
+            <Link href="/admin/customers/new" className={buttonVariants()}>
+              <Plus className="h-4 w-4 mr-2" /> Add customer
+            </Link>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {customers.map((c) => {
+            const leadsThisMonth = leadsByCustomer.get(c.id) ?? 0;
+            return (
+              <Card key={c.id} className="hover:border-primary/40 transition-colors">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <CardTitle className="text-base font-semibold truncate">
+                        {c.businessName}
+                      </CardTitle>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {c.contactName} · {c.email}
+                      </p>
+                    </div>
+                    <StatusBadge status={c.status} />
                   </div>
-                  <p className="mt-1 text-sm text-muted-foreground">{notification.message}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {notification.customer?.businessName ?? "System"} - {formatDateTime(notification.createdAt)}
-                  </p>
-                </Link>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                    <span className="font-medium text-foreground">
+                      {leadsThisMonth} leads this month
+                    </span>
+                    <span>·</span>
+                    <span>Retainer {formatMoney(c.monthlyRetainer)}</span>
+                    {Number(c.appointmentFee) > 0 ? (
+                      <>
+                        <span>·</span>
+                        <span>{formatMoney(c.appointmentFee)} / appt</span>
+                      </>
+                    ) : null}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    <Link
+                      href={`/admin/customers/${c.id}`}
+                      className={buttonVariants({ size: "sm" })}
+                    >
+                      Open
+                      <ChevronRight className="h-3.5 w-3.5 ml-0.5" />
+                    </Link>
+                    <Link
+                      href={`/admin/customers/${c.id}/twilio`}
+                      className={buttonVariants({ variant: "outline", size: "sm" })}
+                    >
+                      <Phone className="h-3.5 w-3.5 mr-1" />
+                      Twilio
+                    </Link>
+                    <Link
+                      href={`/admin/customers/${c.id}/google-ads`}
+                      className={buttonVariants({ variant: "outline", size: "sm" })}
+                    >
+                      Google Ads
+                    </Link>
+                    <Link
+                      href={`/admin/customers/${c.id}/ad-recommendations`}
+                      className={buttonVariants({ variant: "outline", size: "sm" })}
+                    >
+                      <Sparkles className="h-3.5 w-3.5 mr-1" />
+                      AI recos
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Mini({
+  label,
+  value,
+  icon: Icon,
+  accent,
+}: {
+  label: string;
+  value: React.ReactNode;
+  icon: React.ComponentType<{ className?: string }>;
+  accent?: boolean;
+}) {
+  return (
+    <div
+      className={
+        "rounded-md border bg-card p-3 flex items-center justify-between gap-2 " +
+        (accent ? "border-[#F37021]/40 bg-[#F37021]/5" : "")
+      }
+    >
+      <div className="min-w-0">
+        <div className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground font-semibold">
+          {label}
+        </div>
+        <div className="text-base font-bold tabular-nums leading-tight mt-0.5">
+          {value}
+        </div>
+      </div>
+      <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
     </div>
   );
 }

@@ -16,9 +16,10 @@ const NAV: NavGroup[] = [
     ],
   },
   {
-    label: "Quality control",
+    label: "Integrations",
     items: [
-      { href: "/admin/disputes", label: "Internal reviews", iconKey: "disputes" },
+      { href: "/admin/twilio", label: "Twilio", iconKey: "calls" },
+      { href: "/admin/google-ads", label: "Google Ads", iconKey: "spend" },
     ],
   },
   {
