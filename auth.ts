@@ -5,8 +5,10 @@ import { authConfig } from "@/auth.config";
 import { db } from "@/lib/db";
 import { verifyPassword } from "@/lib/password";
 
+// Accepts either a full email address (contractor logins) or a short
+// admin handle like "admin". Lookup is case-insensitive against User.email.
 const credentialsSchema = z.object({
-  email: z.string().email(),
+  email: z.string().min(1),
   password: z.string().min(1),
 });
 

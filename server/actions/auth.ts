@@ -8,7 +8,7 @@ import { changePasswordSchema } from "@/schemas/account";
 import { changeOwnPassword } from "@/server/services/account";
 
 const loginSchema = z.object({
-  email: z.string().email("Enter a valid email"),
+  email: z.string().min(1, "Username or email required"),
   password: z.string().min(1, "Password required"),
 });
 

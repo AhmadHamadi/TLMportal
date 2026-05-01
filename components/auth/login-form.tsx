@@ -27,14 +27,14 @@ export default function LoginForm() {
         <CardContent className="pt-6">
           <form action={formAction} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Email or username</Label>
               <Input
                 id="email"
                 name="email"
-                type="email"
-                autoComplete="email"
+                type="text"
+                autoComplete="username"
                 required
-                placeholder="you@example.com"
+                placeholder="admin or you@example.com"
               />
             </div>
             <div className="space-y-2">
