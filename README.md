@@ -48,6 +48,7 @@ Next.js 16 App Router, React 19, TypeScript, Tailwind 4, shadcn/ui, Prisma 7 + P
 - `docs/OPERATIONS.md`: agency runbook.
 - `docs/EMAIL_SETUP.md`: GoDaddy, Outlook/Microsoft 365, Resend, SPF, DKIM, DMARC setup.
 - `docs/COMPETITIVE_REVIEW.md`: comparison against GHL, ServiceTitan, Jobber, and Housecall Pro.
+- `docs/TLM_EXPERT_BRAIN_PROMPTS.md`: prompt/source map for NotebookLM, ChatGPT Projects, and Claude Projects.
 
 ## Shipped Scope
 - Auth, role routing, admin dashboard, contractor dashboard.
