@@ -182,45 +182,130 @@ export function ReportView({ report }: { report: MonthlyReport }) {
           </div>
         </header>
 
-        {/* SPEND ------------------------------------------------------ */}
-        <section className="report-section space-y-4">
-          <SectionHeading
-            kicker="Marketing spend"
-            title="Spend &amp; efficiency"
-          />
-          <div className="grid grid-cols-3 gap-3">
-            <Stat label="Ad spend" value={formatMoney(totals.adSpend)} />
-            <Stat label="Cost / lead" value={totals.leads > 0 ? formatMoney(totals.cpl) : "—"} />
-            <Stat
-              label="Cost / booked appt"
-              value={totals.confirmedAppts > 0 ? formatMoney(totals.cpa) : "—"}
-            />
-          </div>
-          {totals.adSpendImpressions || totals.adSpendClicks ? (
-            <div className="grid grid-cols-3 gap-3 text-[12px] text-[var(--report-mute)] pt-1">
-              <span>
-                Impressions:{" "}
-                <strong className="text-[var(--report-ink)] tabular-nums">
-                  {(totals.adSpendImpressions ?? 0).toLocaleString()}
-                </strong>
-              </span>
-              <span>
-                Clicks:{" "}
-                <strong className="text-[var(--report-ink)] tabular-nums">
-                  {(totals.adSpendClicks ?? 0).toLocaleString()}
-                </strong>
-              </span>
-              <span>
-                CTR:{" "}
-                <strong className="text-[var(--report-ink)] tabular-nums">
-                  {totals.adSpendImpressions
-                    ? (((totals.adSpendClicks ?? 0) / totals.adSpendImpressions) * 100).toFixed(2) + "%"
-                    : "—"}
-                </strong>
-              </span>
+        {/* GOOGLE ADS — only when package is enabled ----------------- */}
+        {report.sections?.googleAds ? (
+          <section className="report-section space-y-4">
+            <SectionHeading kicker="Google Ads" title="Paid search performance" />
+            <div className="grid grid-cols-3 gap-3">
+              <Stat label="Ad spend" value={formatMoney(report.sections.googleAds.spend)} />
+              <Stat
+                label="Cost / lead"
+                value={report.sections.googleAds.cpl > 0 ? formatMoney(report.sections.googleAds.cpl) : "—"}
+              />
+              <Stat
+                label="Cost / booked appt"
+                value={report.sections.googleAds.cpa > 0 ? formatMoney(report.sections.googleAds.cpa) : "—"}
+              />
             </div>
-          ) : null}
-        </section>
+            {report.sections.googleAds.impressions != null || report.sections.googleAds.clicks != null ? (
+              <div className="grid grid-cols-3 gap-3 text-[12px] text-[var(--report-mute)] pt-1">
+                <span>
+                  Impressions:{" "}
+                  <strong className="text-[var(--report-ink)] tabular-nums">
+                    {(report.sections.googleAds.impressions ?? 0).toLocaleString()}
+                  </strong>
+                </span>
+                <span>
+                  Clicks:{" "}
+                  <strong className="text-[var(--report-ink)] tabular-nums">
+                    {(report.sections.googleAds.clicks ?? 0).toLocaleString()}
+                  </strong>
+                </span>
+                <span>
+                  CTR:{" "}
+                  <strong className="text-[var(--report-ink)] tabular-nums">
+                    {report.sections.googleAds.ctr != null
+                      ? report.sections.googleAds.ctr.toFixed(2) + "%"
+                      : "—"}
+                  </strong>
+                </span>
+              </div>
+            ) : null}
+            {report.sections.googleAds.dataSource === "manual" ? (
+              <p className="text-[10px] text-[var(--report-mute)] italic">
+                Spend numbers entered manually. Live Google Ads API data lands once the dev token is approved.
+              </p>
+            ) : null}
+          </section>
+        ) : null}
+
+        {/* WEBSITE — form submissions when website package is enabled */}
+        {report.sections?.website ? (
+          <section className="report-section space-y-4">
+            <SectionHeading kicker="Website" title="Form submissions &amp; traffic" />
+            <div className="grid grid-cols-3 gap-3">
+              <Stat label="Form submissions" value={report.sections.website.formSubmissions} />
+              <Stat label="Page views" value={report.sections.website.pageViews ?? "—"} />
+              <Stat
+                label="Conversion rate"
+                value={
+                  report.sections.website.conversionRate != null
+                    ? `${report.sections.website.conversionRate.toFixed(1)}%`
+                    : "—"
+                }
+              />
+            </div>
+            {report.sections.website.pageViews == null ? (
+              <p className="text-[10px] text-[var(--report-mute)] italic">
+                Form submissions are tracked from the public lead-intake endpoint. Page views populate
+                once Google Analytics is wired into the website.
+              </p>
+            ) : null}
+          </section>
+        ) : null}
+
+        {/* LOCAL SEO — only when SEO package is enabled --------------- */}
+        {report.sections?.localSeo ? (
+          <section className="report-section space-y-4">
+            <SectionHeading kicker="Local SEO" title="Organic search performance" />
+            <div className="grid grid-cols-3 gap-3">
+              <Stat label="Organic-source leads" value={report.sections.localSeo.organicLeads} />
+              <Stat label="GSC impressions" value={report.sections.localSeo.gscImpressions ?? "—"} />
+              <Stat label="GSC clicks" value={report.sections.localSeo.gscClicks ?? "—"} />
+            </div>
+            {report.sections.localSeo.gscImpressions == null ? (
+              <p className="text-[10px] text-[var(--report-mute)] italic">
+                Live Search Console impressions, clicks, and average position populate once GSC is
+                connected on this customer&rsquo;s Search Console setup page.
+              </p>
+            ) : null}
+          </section>
+        ) : null}
+
+        {/* GBP — only when GBP package is enabled --------------------- */}
+        {report.sections?.gbp ? (
+          <section className="report-section space-y-4">
+            <SectionHeading kicker="Business Profile" title="Google Business Profile activity" />
+            <div className="grid grid-cols-3 gap-3">
+              <Stat label="Tracked GBP calls" value={report.sections.gbp.trackingCalls} />
+              <Stat label="Profile views" value={report.sections.gbp.profileViews ?? "—"} />
+              <Stat label="Direction requests" value={report.sections.gbp.directionRequests ?? "—"} />
+            </div>
+            {report.sections.gbp.profileViews == null ? (
+              <p className="text-[10px] text-[var(--report-mute)] italic">
+                Live profile views and direction requests populate once Business Profile API is connected.
+              </p>
+            ) : null}
+          </section>
+        ) : null}
+
+        {/* SPEND fallback — show when no service-tailored sections ---- */}
+        {!report.sections?.googleAds &&
+        !report.sections?.website &&
+        !report.sections?.localSeo &&
+        !report.sections?.gbp ? (
+          <section className="report-section space-y-4">
+            <SectionHeading kicker="Marketing spend" title="Spend &amp; efficiency" />
+            <div className="grid grid-cols-3 gap-3">
+              <Stat label="Ad spend" value={formatMoney(totals.adSpend)} />
+              <Stat label="Cost / lead" value={totals.leads > 0 ? formatMoney(totals.cpl) : "—"} />
+              <Stat
+                label="Cost / booked appt"
+                value={totals.confirmedAppts > 0 ? formatMoney(totals.cpa) : "—"}
+              />
+            </div>
+          </section>
+        ) : null}
 
         {/* SOURCE BARS ------------------------------------------------ */}
         <section className="report-section space-y-4">

@@ -39,6 +39,9 @@ export async function buildMonthlyReport(
     smsOutbound,
     spend,
     billing,
+    formSubmissions,
+    organicLeads,
+    callLeadsCount,
   ] = await Promise.all([
     db.lead.count({ where: { ...where, deletedAt: null } }),
     db.lead.groupBy({
@@ -64,6 +67,28 @@ export async function buildMonthlyReport(
       where: { customerId: args.customerId, billingMonth: args.month },
       orderBy: { createdAt: "asc" },
     }),
+    // Website: form submissions = leads coming from a landing-page form or quote button
+    db.lead.count({
+      where: {
+        ...where,
+        deletedAt: null,
+        source: { in: ["LANDING_PAGE_FORM", "QUOTE_BUTTON"] },
+      },
+    }),
+    // SEO proxy: leads NOT from Google Ads or Manual = "organic-ish". Real GSC numbers come from API later.
+    db.lead.count({
+      where: {
+        ...where,
+        deletedAt: null,
+        source: {
+          in: ["LANDING_PAGE_FORM", "QUOTE_BUTTON", "TRACKING_PHONE_CALL", "SMS_REPLY"],
+        },
+      },
+    }),
+    // GBP proxy: phone calls to tracking number (most likely from GBP listing)
+    db.lead.count({
+      where: { ...where, deletedAt: null, source: "TRACKING_PHONE_CALL" },
+    }),
   ]);
 
   const recentLeads = await db.lead.findMany({
@@ -86,6 +111,71 @@ export async function buildMonthlyReport(
   const adSpendNum = Number(spend?.spendAmount?.toString() ?? "0");
   const cpl = leads > 0 ? adSpendNum / leads : 0;
   const cpa = confirmedAppts > 0 ? adSpendNum / confirmedAppts : 0;
+  const adsConversions = spend?.conversions ?? 0;
+  const adsCostPerConversion = adsConversions > 0 ? adSpendNum / adsConversions : 0;
+
+  // Service-tailored sections — only included when the customer has the package enabled.
+  const sections = {
+    leadEngine: customer.leadEngineEnabled
+      ? {
+          totalLeads: leads,
+          calls: callsCount,
+          smsInbound,
+          smsOutbound,
+          confirmedAppts,
+          billableAppts,
+          bookingRate: leads > 0 ? Math.round((confirmedAppts / leads) * 100) : 0,
+        }
+      : null,
+    googleAds: customer.googleAdsEnabled
+      ? {
+          spend: adSpendNum,
+          impressions: spend?.impressions ?? null,
+          clicks: spend?.clicks ?? null,
+          ctr:
+            spend?.impressions && spend.clicks != null && spend.impressions > 0
+              ? (spend.clicks / spend.impressions) * 100
+              : null,
+          conversions: spend?.conversions ?? null,
+          costPerConversion: adsCostPerConversion,
+          cpl,
+          cpa,
+          notes: spend?.notes ?? null,
+          // Real Google Ads API integration ships in a later phase; until then,
+          // these come from manual /admin/ad-spend entries.
+          dataSource: "manual" as const,
+        }
+      : null,
+    website: customer.websiteEnabled
+      ? {
+          formSubmissions,
+          // formViews / pageViews require GA4 integration; show null until wired.
+          pageViews: null as number | null,
+          conversionRate: null as number | null,
+          websiteUrl: customer.websiteUrl,
+          landingPageUrl: customer.landingPageUrl,
+        }
+      : null,
+    localSeo: customer.localSeoEnabled
+      ? {
+          organicLeads,
+          // GSC impressions/clicks/avg position come from API integration later.
+          gscImpressions: null as number | null,
+          gscClicks: null as number | null,
+          gscAvgPosition: null as number | null,
+          dataSource: "manual" as const,
+        }
+      : null,
+    gbp: customer.gbpEnabled
+      ? {
+          trackingCalls: callLeadsCount,
+          // Direction requests, profile views come from Business Profile Performance API later.
+          profileViews: null as number | null,
+          directionRequests: null as number | null,
+          dataSource: "manual" as const,
+        }
+      : null,
+  };
 
   return {
     customer,
@@ -106,6 +196,7 @@ export async function buildMonthlyReport(
       cpl,
       cpa,
     },
+    sections,
     leadsBySource: leadsBySource.map((g) => ({ source: g.source, count: g._count })),
     leadsByStatus: leadsByStatus.map((g) => ({ status: g.status, count: g._count })),
     recentLeads,

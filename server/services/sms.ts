@@ -201,7 +201,7 @@ export async function recordLeadAvailabilityReply(args: {
   customerId: string;
   leadId: string;
   body: string;
-}): Promise<{ contractorNotified: boolean; simulated: boolean }> {
+}): Promise<{ contractorNotified: boolean; simulated: boolean; clarified?: boolean; escalated?: boolean }> {
   const cleanBody = args.body.trim();
   if (!cleanBody) return { contractorNotified: false, simulated: false };
 
@@ -214,12 +214,88 @@ export async function recordLeadAvailabilityReply(args: {
   });
   if (!lead) return { contractorNotified: false, simulated: false };
 
+  // AI parse — Claude Haiku extracts a clean preferredTime, flags ambiguity
+  // or escalation. Falls back to the raw body if Anthropic isn't configured,
+  // so the existing flow still works.
+  const { parseLeadReply, CLARIFYING_QUESTIONS } = await import("@/lib/ai-sms");
+  const parsed = await parseLeadReply({ latestMessage: cleanBody });
   const tn = await activeTrackingNumber(lead.customerId);
+
+  // ESCALATE — lead is asking a question / complaining. Don't auto-respond
+  // anything beyond a "we'll get back to you" ack. Notify admin.
+  if (parsed.escalate) {
+    if (lead.phone) {
+      const ack = SMS_TEMPLATES.leadAvailabilityReceived({ firstName: lead.firstName });
+      const ackResult = await sendSms({ to: lead.phone, body: ack, from: tn?.twilioPhoneNumber });
+      await db.smsMessage.create({
+        data: {
+          customerId: lead.customerId,
+          leadId: lead.id,
+          fromNumber: tn?.twilioPhoneNumber ?? "+system",
+          toNumber: lead.phone,
+          body: ack,
+          direction: "OUTBOUND",
+          providerMessageId: ackResult.providerMessageId,
+          status: ackResult.status,
+        },
+      });
+    }
+    await db.notification.create({
+      data: {
+        customerId: lead.customerId,
+        category: "LEAD",
+        title: `Lead reply needs admin attention (${parsed.intent.toLowerCase()})`,
+        message: cleanBody.slice(0, 200),
+        link: `/admin/leads/${lead.id}`,
+      },
+    });
+    await db.leadEvent.create({
+      data: {
+        leadId: lead.id,
+        type: "AI_ESCALATED_LEAD_REPLY",
+        description: `AI flagged for admin: ${parsed.intent}`,
+        metadata: { intent: parsed.intent, latest: cleanBody.slice(0, 200) },
+      },
+    });
+    return { contractorNotified: false, simulated: false, escalated: true };
+  }
+
+  // CLARIFY — lead's reply is too vague to forward. Send an admin-approved
+  // clarifying question (NEVER free-form generated) and wait.
+  if (parsed.needsClarification && parsed.clarifyingQuestionKey && lead.phone) {
+    const clarifyBody = CLARIFYING_QUESTIONS[parsed.clarifyingQuestionKey];
+    const r = await sendSms({ to: lead.phone, body: clarifyBody, from: tn?.twilioPhoneNumber });
+    await db.smsMessage.create({
+      data: {
+        customerId: lead.customerId,
+        leadId: lead.id,
+        fromNumber: tn?.twilioPhoneNumber ?? "+system",
+        toNumber: lead.phone,
+        body: clarifyBody,
+        direction: "OUTBOUND",
+        providerMessageId: r.providerMessageId,
+        status: r.status,
+      },
+    });
+    await db.leadEvent.create({
+      data: {
+        leadId: lead.id,
+        type: "AI_CLARIFIED_LEAD_REPLY",
+        description: `AI asked: ${parsed.clarifyingQuestionKey}`,
+        metadata: { intent: parsed.intent, key: parsed.clarifyingQuestionKey },
+      },
+    });
+    return { contractorNotified: false, simulated: r.simulated, clarified: true };
+  }
+
+  // ACCEPT — use AI-extracted clean time, fall back to the raw message.
+  const preferredTimeForContractor = parsed.extractedTime ?? cleanBody;
+
   const contractorBody = SMS_TEMPLATES.contractorProposedTime({
     leadName: leadName(lead),
     service: lead.serviceRequested,
     cityOrNeighbourhood: leadArea(lead),
-    preferredTime: cleanBody,
+    preferredTime: preferredTimeForContractor,
     projectDetails: lead.projectDetails,
   });
   const leadAck = SMS_TEMPLATES.leadAvailabilityReceived({ firstName: lead.firstName });
@@ -243,7 +319,7 @@ export async function recordLeadAvailabilityReply(args: {
     await tx.lead.update({
       where: { id: lead.id },
       data: {
-        preferredTime: cleanBody,
+        preferredTime: preferredTimeForContractor,
         status: lead.status === "NEW" ? "CONTACTED" : lead.status,
       },
     });
