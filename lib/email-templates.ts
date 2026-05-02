@@ -24,7 +24,7 @@ function shell({
   body,
   ctaLabel,
   ctaUrl,
-  footer = "Trade Leads Marketing - Lead Engine for contractors.",
+  footer = "Trade Leads - Lead Engine for contractors.",
 }: {
   preheader: string;
   heading: string;
@@ -56,7 +56,7 @@ function shell({
     <table role="presentation" cellpadding="0" cellspacing="0" width="560" style="max-width:560px;width:100%;background:#fff;border:1px solid ${BRAND.border};border-radius:12px;overflow:hidden;">
       <tr>
         <td style="background:${BRAND.navy};padding:18px 24px;color:#fff;">
-          <span style="font-weight:700;font-size:15px;letter-spacing:-0.01em;">Trade Leads Marketing</span>
+          <span style="font-weight:700;font-size:15px;letter-spacing:-0.01em;">Trade Leads</span>
         </td>
       </tr>
       <tr>

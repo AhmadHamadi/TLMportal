@@ -115,7 +115,7 @@ export function Sidebar({
         ))}
       </nav>
       <div className="px-4 py-3 text-[11px] text-sidebar-foreground/45 border-t border-sidebar-border">
-        Trade Leads Marketing
+        Trade Leads
       </div>
     </aside>
   );

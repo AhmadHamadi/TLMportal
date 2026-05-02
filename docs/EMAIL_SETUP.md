@@ -16,7 +16,7 @@ Environment variables:
 ```env
 EMAIL_PROVIDER=resend
 RESEND_API_KEY=...
-RESEND_FROM_EMAIL="Trade Leads Marketing <portal@yourdomain.com>"
+RESEND_FROM_EMAIL="Trade Leads <portal@yourdomain.com>"
 ```
 
 DNS at GoDaddy:
@@ -41,7 +41,7 @@ SMTP_PORT=587
 SMTP_SECURE=false
 SMTP_USER=you@yourdomain.com
 SMTP_PASSWORD=your-mailbox-password-or-app-password
-SMTP_FROM_EMAIL="Trade Leads Marketing <you@yourdomain.com>"
+SMTP_FROM_EMAIL="Trade Leads <you@yourdomain.com>"
 ```
 
 Important:
@@ -96,7 +96,7 @@ Simulated mode keeps development safe: code paths work, but no real email sends.
 
 ## Best Client Experience
 For contractor trust:
-- From name: `Trade Leads Marketing` or `TLM Portal`.
+- From name: `Trade Leads` or `TLM Portal`.
 - From address: `portal@yourdomain.com` or `leads@yourdomain.com`.
 - Reply-to: your real Outlook inbox.
 - Subject lines should be plain and useful: `New lead: Concrete driveway in Mississauga`.

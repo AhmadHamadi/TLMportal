@@ -1,6 +1,6 @@
 # TLM Portal - Project Instructions
 
-This is the durable brief for Claude/Codex sessions on the Trade Leads Marketing agency portal.
+This is the durable brief for Claude/Codex sessions on the Trade Leads agency portal.
 
 ## Product
 TLM Portal is an agency operations system for a contractor lead-engine service. It is not a generic CRM. It tracks customers, leads, calls, SMS, booked appointments, internal reviews, billing, ad spend, onboarding, contracts, reports, and integration health.

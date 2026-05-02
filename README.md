@@ -1,6 +1,6 @@
 # TLM Portal
 
-Agency operations dashboard for Trade Leads Marketing.
+Agency operations dashboard for Trade Leads.
 
 Roles:
 - Admin: agency owner/operator with full visibility across all contractor customers.

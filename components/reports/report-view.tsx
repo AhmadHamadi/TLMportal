@@ -127,7 +127,7 @@ export function ReportView({ report }: { report: MonthlyReport }) {
         {/* COVER ----------------------------------------------------- */}
         <header className="report-cover space-y-8">
           <div className="flex items-start justify-between gap-4">
-            <BrandMark size={42} wordmark="Trade Leads Marketing" />
+            <BrandMark size={42} wordmark="Trade Leads" />
             <div className="text-right">
               <div className="text-[11px] uppercase tracking-[0.16em] text-[var(--report-mute)] font-semibold">
                 Performance report
@@ -467,7 +467,7 @@ export function ReportView({ report }: { report: MonthlyReport }) {
         {/* FOOTER ----------------------------------------------------- */}
         <footer className="border-t border-[var(--report-line)] pt-5 mt-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-[11px] text-[var(--report-mute)]">
           <span>
-            <strong className="text-[var(--report-ink)]">Trade Leads Marketing</strong> ·
+            <strong className="text-[var(--report-ink)]">Trade Leads</strong> ·
             Lead Engine for contractors
           </span>
           <span>Confidential · {customer.businessName}</span>

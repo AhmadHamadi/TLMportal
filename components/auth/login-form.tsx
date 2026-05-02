@@ -14,11 +14,10 @@ export default function LoginForm() {
 
   return (
     <div className="w-full max-w-sm space-y-6">
-      <div className="flex flex-col items-center text-center space-y-2">
-        <BrandMark size={48} showWordmark={false} />
-        <h1 className="font-display text-2xl font-bold tracking-tight">
-          Trade Leads Marketing
-        </h1>
+      <div className="flex flex-col items-center text-center space-y-3">
+        {/* Use the full lockup PNG (logo + wordmark baked in) on the login
+            screen — it's the biggest, most visible brand surface. */}
+        <BrandMark size={64} variant="full" showWordmark={false} />
         <p className="text-sm text-muted-foreground">
           Sign in to your dashboard.
         </p>
@@ -59,7 +58,7 @@ export default function LoginForm() {
         </CardContent>
       </Card>
       <p className="text-center text-xs text-muted-foreground">
-        Contractor accounts are created by your TLM account manager.
+        Contractor accounts are created by your Trade Leads account manager.
       </p>
     </div>
   );

@@ -14,7 +14,7 @@ const today = () =>
   new Intl.DateTimeFormat("en-CA", { dateStyle: "long" }).format(new Date());
 
 export interface ContractFillVars {
-  agencyName: string; // "Trade Leads Marketing"
+  agencyName: string; // "Trade Leads"
   customerName: string; // contact person
   businessName: string; // legal name of contractor
   email: string;
@@ -35,7 +35,7 @@ export function defaultFillVars(args: {
   appointmentFee: string;
 }): ContractFillVars {
   return {
-    agencyName: "Trade Leads Marketing",
+    agencyName: "Trade Leads",
     customerName: args.contactName,
     businessName: args.businessName,
     email: args.email,

@@ -35,7 +35,7 @@ export function ContractRender({
 
       <article className="contract-page mx-auto max-w-3xl rounded-lg border bg-card p-10 shadow-sm space-y-6">
         <header className="flex items-start justify-between border-b pb-5">
-          <BrandMark size={36} wordmark="Trade Leads Marketing" />
+          <BrandMark size={36} wordmark="Trade Leads" />
           <div className="text-right">
             <div className="text-xs uppercase tracking-wide text-muted-foreground">Contract</div>
             <div className="text-sm font-semibold mt-0.5">{title}</div>

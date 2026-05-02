@@ -18,10 +18,10 @@ const jakarta = Plus_Jakarta_Sans({
 
 export const metadata: Metadata = {
   title: "TLM Portal",
-  description: "Trade Leads Marketing — agency operations dashboard",
+  description: "Trade Leads — agency operations dashboard",
   icons: {
-    icon: "/tlmlogo.png",
-    apple: "/tlmlogo.png",
+    icon: "/tlmlogo-mark.png",
+    apple: "/tlmlogo-mark.png",
   },
 };
 
