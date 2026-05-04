@@ -7,6 +7,7 @@ import {
   renderContract,
 } from "@/lib/contract-templates";
 import { ContractRender } from "@/components/contracts/contract-render";
+import { isBillingCurrency } from "@/lib/money";
 
 export default async function FilledContractPage({
   params,
@@ -28,6 +29,17 @@ export default async function FilledContractPage({
     setupFee: customer.setupFee.toString(),
     monthlyRetainer: customer.monthlyRetainer.toString(),
     appointmentFee: customer.appointmentFee.toString(),
+    seoGbpRetainer: customer.seoGbpMonthlyRetainer.toString(),
+    services: customer.services.filter((s) => s.isActive).map((s) => s.name),
+    packages: {
+      leadEngineEnabled: customer.leadEngineEnabled,
+      googleAdsEnabled: customer.googleAdsEnabled,
+      websiteEnabled: customer.websiteEnabled,
+      localSeoEnabled: customer.localSeoEnabled,
+      gbpEnabled: customer.gbpEnabled,
+    },
+    disputeWindowHours: customer.disputeWindowHours,
+    currencyCode: isBillingCurrency(customer.billingCurrency) ? customer.billingCurrency : "CAD",
   });
 
   const filled = renderContract(template, vars);

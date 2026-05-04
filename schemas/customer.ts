@@ -37,6 +37,7 @@ export const customerCreateSchema = z.object({
   seoGbpMonthlyRetainer: moneyAmount.default("0"),
   monthlyAdBudget: moneyAmount.default("0"),
   googleAdsBudgetCurrency: z.enum(["CAD", "USD"]).default("CAD"),
+  billingCurrency: z.enum(["CAD", "USD"]).default("CAD"),
   minProjectSize: z
     .union([z.string(), z.number(), z.literal("")])
     .optional()

@@ -216,7 +216,7 @@ export async function approveAppointmentFee(
   return db.$transaction(async (tx) => {
     const appt = await tx.appointment.findUnique({
       where: { id: args.appointmentId },
-      include: { customer: { select: { appointmentFee: true } } },
+      include: { customer: { select: { appointmentFee: true, billingCurrency: true } } },
     });
     if (!appt) throw new Error("Appointment not found");
     if (!appt.isBillable) throw new Error("Appointment not billable");
@@ -234,6 +234,7 @@ export async function approveAppointmentFee(
         appointmentId: appt.id,
         type: "APPOINTMENT_FEE",
         amount: appt.customer.appointmentFee,
+        currency: appt.customer.billingCurrency,
         status: "APPROVED",
         billingMonth: month,
         description: "Confirmed estimate appointment",

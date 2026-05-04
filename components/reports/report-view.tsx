@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
-import { formatMoney } from "@/lib/money";
+import { formatMoney as formatMoneyBase, isBillingCurrency, type BillingCurrency } from "@/lib/money";
 import { formatDate } from "@/lib/dates";
 import type { MonthlyReport } from "@/server/services/reports";
 import { BrandMark } from "@/components/shared/brand-mark";
@@ -53,8 +53,9 @@ function generatedOn(): string {
   }).format(new Date());
 }
 
-function executiveSummary(report: MonthlyReport): string {
+function executiveSummary(report: MonthlyReport, currency: BillingCurrency): string {
   const { totals, customer } = report;
+  const fm = (n: number | string) => formatMoneyBase(n, currency);
   const bookingRate =
     totals.leads > 0 ? Math.round((totals.confirmedAppts / totals.leads) * 100) : 0;
   const billRate =
@@ -63,7 +64,7 @@ function executiveSummary(report: MonthlyReport): string {
       : 0;
   const cplCopy =
     totals.adSpend > 0 && totals.leads > 0
-      ? `Cost per lead landed at ${formatMoney(totals.cpl)} on ${formatMoney(totals.adSpend)} of ad spend.`
+      ? `Cost per lead landed at ${fm(totals.cpl)} on ${fm(totals.adSpend)} of ad spend.`
       : "";
   const trafficCopy =
     totals.leads === 0
@@ -78,6 +79,12 @@ function executiveSummary(report: MonthlyReport): string {
 
 export function ReportView({ report }: { report: MonthlyReport }) {
   const { customer, month, totals, leadsBySource, leadsByStatus, recentLeads, billing } = report;
+  // Customer's billing currency drives every dollar value on the report — CAD
+  // customers see CA$, USD customers see US$. Defaults to CAD when null.
+  const currency: BillingCurrency = isBillingCurrency(customer.billingCurrency)
+    ? customer.billingCurrency
+    : "CAD";
+  const formatMoney = (n: number | string) => formatMoneyBase(n, currency);
   const totalLeads = totals.leads || 1;
   const maxSourceCount = Math.max(1, ...leadsBySource.map((source) => source.count));
   const billingTotal = billing.reduce((sum, row) => sum + Number(row.amount), 0);
@@ -177,7 +184,7 @@ export function ReportView({ report }: { report: MonthlyReport }) {
               Executive summary
             </div>
             <p className="text-[14px] leading-[1.65] text-[var(--report-ink)]">
-              {executiveSummary(report)}
+              {executiveSummary(report, currency)}
             </p>
           </div>
         </header>

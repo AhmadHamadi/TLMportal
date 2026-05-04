@@ -270,6 +270,10 @@ model Customer {
   seoGbpMonthlyRetainer     Decimal             @default(0) @db.Decimal(10, 2)
   monthlyAdBudget           Decimal             @default(0) @db.Decimal(10, 2)
   googleAdsBudgetCurrency   String              @default("CAD")
+  // Currency the customer is billed in (CAD or USD). Set at onboarding and
+  // persisted on every BillingRecord + StripeSubscription so historical rows
+  // stay auditable even if the customer's default ever changes.
+  billingCurrency           String              @default("CAD")
   minProjectSize            Decimal?            @db.Decimal(10, 2)
   disputeWindowHours        Int                 @default(48)
   status                    CustomerStatus      @default(ACTIVE)
@@ -531,6 +535,9 @@ model BillingRecord {
   appointmentId       String?
   type                BillingType
   amount              Decimal       @db.Decimal(10, 2)
+  // Frozen at creation time from Customer.billingCurrency so the row stays
+  // self-describing even if the customer's billing currency ever changes.
+  currency            String        @default("CAD")
   status              BillingStatus @default(PENDING)
   stripeInvoiceId     String?
   stripeInvoiceItemId String?       @unique
@@ -553,6 +560,9 @@ model StripeSubscription {
   stripeCustomerId     String   @unique
   stripeSubscriptionId String   @unique
   status               String
+  // Currency that this subscription was created in. Stripe locks currency at
+  // subscription create — a change later requires cancelling and re-creating.
+  currency             String   @default("CAD")
   currentPeriodStart   DateTime
   currentPeriodEnd     DateTime
   createdAt            DateTime @default(now())

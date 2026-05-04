@@ -37,6 +37,7 @@ type Customer = {
   seoGbpMonthlyRetainer?: string;
   monthlyAdBudget?: string;
   googleAdsBudgetCurrency?: "CAD" | "USD";
+  billingCurrency?: "CAD" | "USD";
   minProjectSize?: string | null;
   disputeWindowHours?: number;
   status?: "ACTIVE" | "PAUSED" | "WINTER_MODE" | "CANCELLED";
@@ -94,6 +95,22 @@ export function CustomerForm({ customer }: { customer?: Customer }) {
             You can change forwarding later on the Twilio setup page.
           </p>
         </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="billingCurrency">Billing currency</Label>
+          <Select name="billingCurrency" defaultValue="CAD">
+            <SelectTrigger id="billingCurrency">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="CAD">CAD ($)</SelectItem>
+              <SelectItem value="USD">USD ($)</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Locked at onboarding — Stripe subscription, invoices, and contract auto-fill use this.
+            To switch currency later you have to cancel and re-create the subscription.
+          </p>
+        </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <Label htmlFor="setupFee">Setup fee</Label>
@@ -115,6 +132,32 @@ export function CustomerForm({ customer }: { customer?: Customer }) {
               step="0.01"
               min="0"
               defaultValue="0"
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="appointmentFee">Appointment fee</Label>
+            <Input
+              id="appointmentFee"
+              name="appointmentFee"
+              type="number"
+              step="0.01"
+              min="0"
+              defaultValue="0"
+              placeholder="0 if retainer-only"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="monthlyAdBudget">Monthly ad budget</Label>
+            <Input
+              id="monthlyAdBudget"
+              name="monthlyAdBudget"
+              type="number"
+              step="0.01"
+              min="0"
+              defaultValue="0"
+              placeholder="0 if no ads"
             />
           </div>
         </div>
@@ -300,6 +343,19 @@ export function CustomerForm({ customer }: { customer?: Customer }) {
             <Input id="monthlyAdBudget" name="monthlyAdBudget" type="number" step="0.01" defaultValue={customer?.monthlyAdBudget ?? "0"} />
           </div>
           <div>
+            <Label htmlFor="billingCurrency">Billing currency</Label>
+            <Select name="billingCurrency" defaultValue={customer?.billingCurrency ?? "CAD"}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="CAD">CAD</SelectItem>
+                <SelectItem value="USD">USD</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Used for retainer, setup, and appointment-fee invoices.
+            </p>
+          </div>
+          <div>
             <Label htmlFor="googleAdsBudgetCurrency">Ad budget currency</Label>
             <Select name="googleAdsBudgetCurrency" defaultValue={customer?.googleAdsBudgetCurrency ?? "CAD"}>
               <SelectTrigger><SelectValue /></SelectTrigger>
@@ -308,6 +364,9 @@ export function CustomerForm({ customer }: { customer?: Customer }) {
                 <SelectItem value="USD">USD</SelectItem>
               </SelectContent>
             </Select>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Independent of billing currency — Google Ads bills the contractor directly.
+            </p>
           </div>
           <div>
             <Label htmlFor="minProjectSize">Minimum project size</Label>

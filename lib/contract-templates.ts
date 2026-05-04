@@ -1,7 +1,10 @@
-// Master contract template library. One general MSA + scoped SOWs that the
-// admin can render with the customer's details auto-filled, then download as
-// a printable HTML page (browser saves as PDF). Replaces the per-client
-// contract uploads when you don't have a signed PDF yet.
+// We ship one onboarding contract — the Master Onboarding Agreement. It
+// auto-fills with the customer's selected services, setup fee, monthly
+// retainer, appointment fee, billing currency, and dispute window. The
+// admin sends it right before kicking off Stripe onboarding so the client
+// has accepted the fees before any charge runs.
+
+import type { BillingCurrency } from "./money";
 
 export interface ContractTemplate {
   id: string;
@@ -14,15 +17,45 @@ const today = () =>
   new Intl.DateTimeFormat("en-CA", { dateStyle: "long" }).format(new Date());
 
 export interface ContractFillVars {
-  agencyName: string; // "Trade Leads"
-  customerName: string; // contact person
-  businessName: string; // legal name of contractor
+  agencyName: string;
+  customerName: string;
+  businessName: string;
   email: string;
   phone: string;
   setupFee: string;
   monthlyRetainer: string;
   appointmentFee: string;
+  seoGbpRetainer: string;
+  servicesSelected: string;
+  packagesSelected: string;
+  appointmentBilling: string;
+  disputeWindowHours: string;
+  currencyCode: BillingCurrency;
+  currencySymbol: string;
   date: string;
+}
+
+function moneyLine(amount: string, currencyCode: BillingCurrency, currencySymbol: string): string {
+  const n = Number(amount);
+  if (!Number.isFinite(n) || n <= 0) return `${currencySymbol}0 ${currencyCode}`;
+  return `${currencySymbol}${n.toFixed(2)} ${currencyCode}`;
+}
+
+function packagesLine(p: {
+  leadEngineEnabled: boolean;
+  googleAdsEnabled: boolean;
+  websiteEnabled: boolean;
+  localSeoEnabled: boolean;
+  gbpEnabled: boolean;
+}): string {
+  const items = [
+    p.leadEngineEnabled ? "Lead Engine (tracking number, SMS, booked appointments)" : null,
+    p.googleAdsEnabled ? "Google Ads management" : null,
+    p.websiteEnabled ? "Website / landing page build" : null,
+    p.localSeoEnabled ? "Local SEO" : null,
+    p.gbpEnabled ? "Google Business Profile management" : null,
+  ].filter(Boolean) as string[];
+  return items.length > 0 ? items.map((s) => `   - ${s}`).join("\n") : "   - (no packages selected — onboarding cannot start)";
 }
 
 export function defaultFillVars(args: {
@@ -33,16 +66,44 @@ export function defaultFillVars(args: {
   setupFee: string;
   monthlyRetainer: string;
   appointmentFee: string;
+  seoGbpRetainer: string;
+  services: string[];
+  packages: {
+    leadEngineEnabled: boolean;
+    googleAdsEnabled: boolean;
+    websiteEnabled: boolean;
+    localSeoEnabled: boolean;
+    gbpEnabled: boolean;
+  };
+  disputeWindowHours: number;
+  currencyCode: BillingCurrency;
 }): ContractFillVars {
+  const currencySymbol = args.currencyCode === "USD" ? "US$" : "CA$";
+  const apptFeeNum = Number(args.appointmentFee);
+  const appointmentBilling =
+    Number.isFinite(apptFeeNum) && apptFeeNum > 0
+      ? `Confirmed estimate appointment fee of ${moneyLine(args.appointmentFee, args.currencyCode, currencySymbol)} per appointment, billed monthly in arrears.`
+      : "No per-appointment fee. Monthly retainer covers the included services.";
+
   return {
     agencyName: "Trade Leads",
     customerName: args.contactName,
     businessName: args.businessName,
     email: args.email,
     phone: args.phone,
-    setupFee: args.setupFee,
-    monthlyRetainer: args.monthlyRetainer,
-    appointmentFee: args.appointmentFee,
+    setupFee: moneyLine(args.setupFee, args.currencyCode, currencySymbol),
+    monthlyRetainer: moneyLine(args.monthlyRetainer, args.currencyCode, currencySymbol),
+    appointmentFee: moneyLine(args.appointmentFee, args.currencyCode, currencySymbol),
+    seoGbpRetainer: moneyLine(args.seoGbpRetainer, args.currencyCode, currencySymbol),
+    servicesSelected:
+      args.services.length > 0
+        ? args.services.map((s) => `   - ${s}`).join("\n")
+        : "   - (services to be confirmed at intake)",
+    packagesSelected: packagesLine(args.packages),
+    appointmentBilling,
+    disputeWindowHours: String(args.disputeWindowHours),
+    currencyCode: args.currencyCode,
+    currencySymbol,
     date: today(),
   };
 }
@@ -55,52 +116,62 @@ function fill(body: string, vars: ContractFillVars): string {
   return out;
 }
 
-export const CONTRACT_TEMPLATES: ContractTemplate[] = [
-  {
-    id: "msa-v1",
-    type: "MASTER_SERVICE_AGREEMENT",
-    name: "Master Service Agreement (Lead Engine)",
-    body: `THIS MASTER SERVICE AGREEMENT (this "Agreement") is entered into on {{date}} between {{agencyName}} ("Agency") and {{businessName}} ("Client"), represented by {{customerName}} ({{email}} / {{phone}}).
+const MASTER_ONBOARDING_BODY = `MASTER ONBOARDING AGREEMENT
+
+This Agreement is entered into on {{date}} between {{agencyName}} ("Agency") and {{businessName}} ("Client"), represented by {{customerName}} ({{email}} / {{phone}}).
+
+By signing below, Client confirms the scope, fees, and billing currency listed in this Agreement and authorizes Agency to begin onboarding immediately upon signature.
 
 1. SERVICES
-The Agency will provide lead-generation services for the Client through Google Ads management, landing-page hosting, call/SMS tracking, and lead routing (the "Lead Engine"). Specific scope, deliverables, and exclusions for each service line are described in the applicable Statement of Work.
+   Agency will deliver the following packages to Client:
+{{packagesSelected}}
 
-2. FEES
-2.1 Setup Fee. Client will pay a one-time setup fee of $ {{setupFee}} CAD on signing.
-2.2 Monthly Retainer. Client will pay a recurring monthly retainer of $ {{monthlyRetainer}} CAD, billed via Stripe on the same calendar day each month, prorated for the first month.
-2.3 Confirmed Estimate Appointment Fee. Client will pay $ {{appointmentFee}} CAD per confirmed estimate appointment, as defined in Section 3. These fees are billed monthly in arrears via Stripe invoice item.
-2.4 Ad Spend. Client is responsible for the cost of media (Google Ads spend) directly with Google. Agency does not mark up or rebill ad spend.
+   Within those packages, the initial service lines Agency will market are:
+{{servicesSelected}}
+
+   Service areas, tracking numbers, landing-page rebuilds, ad campaigns, GBP management, and SEO tasks are detailed on the Client's setup pages inside the TLM Portal and may evolve over the engagement without amending this Agreement.
+
+2. FEES AND BILLING CURRENCY
+   All fees in this Agreement are denominated in {{currencyCode}} and will be invoiced via Stripe in {{currencyCode}}.
+   2.1 Setup Fee. {{setupFee}}, billed once on signing. Onboarding deliverables (tracking number provisioning, landing page or rebuild, GBP audit, ad account access, conversion goals) begin once this fee is paid.
+   2.2 Monthly Retainer. {{monthlyRetainer}}, billed every 30 days from the subscription start date via Stripe (collection method: invoice, net 7).
+   2.3 Booked Appointment Fee. {{appointmentBilling}}
+   2.4 SEO / GBP Retainer. {{seoGbpRetainer}} additional monthly retainer when Local SEO or Google Business Profile management is included in this Agreement.
+   2.5 Ad Spend. Client pays Google directly for media costs. Agency does not mark up or rebill ad spend.
 
 3. CONFIRMED ESTIMATE APPOINTMENTS
-A lead becomes a billable confirmed estimate appointment when ALL of the following are true:
-(a) the prospect is real and reachable at a valid phone number;
-(b) the requested service is one Client offers;
-(c) the prospect's location is within Client's defined service area;
-(d) the project meets Client's stated minimum project size, if any;
-(e) a date or time window for the estimate is agreed;
-(f) Client has been notified of the lead;
-(g) Client has accepted the lead, or has not validly disputed it within forty-eight (48) hours of being notified.
+   A lead becomes a billable confirmed estimate appointment when ALL of the following are true:
+   (a) the prospect is real and reachable at a valid phone number;
+   (b) the requested service is one Client offers;
+   (c) the prospect's location is within Client's defined service area;
+   (d) the project meets Client's stated minimum project size, if any;
+   (e) a date or time window for the estimate is agreed;
+   (f) Client has been notified of the lead;
+   (g) Client has accepted the lead, or has not validly disputed it within {{disputeWindowHours}} hours of being notified.
 
 4. DISPUTES
-Client may dispute a confirmed estimate appointment within forty-eight (48) hours of being notified by replying through the TLM Portal with one of the listed reasons (spam, wrong number, duplicate within 30 days, outside service area, service not offered, below minimum project size, cancelled before confirmation, or existing customer). Agency will review and respond in good faith. After the dispute window closes, the appointment is final and billable.
+   Client may dispute a confirmed estimate appointment within {{disputeWindowHours}} hours of being notified by replying through the TLM Portal with one of the listed reasons (spam, wrong number, duplicate within 30 days, outside service area, service not offered, below minimum project size, cancelled before confirmation, or existing customer). Agency will review and respond in good faith. After the dispute window closes, the appointment is final and billable.
 
 5. TERM AND TERMINATION
-This Agreement is month-to-month and may be terminated by either party with thirty (30) days' written notice. The Client remains responsible for all confirmed estimate appointments fees accrued before the effective termination date.
+   This Agreement is month-to-month and may be terminated by either party with thirty (30) days' written notice. Client remains responsible for all confirmed estimate appointment fees accrued before the effective termination date.
 
 6. INTELLECTUAL PROPERTY
-Agency retains ownership of campaign structures, ad copy, landing pages, and tracking infrastructure. On termination, Client receives a copy of any websites or landing pages built specifically for Client and may continue hosting them at Client's expense.
+   Agency retains ownership of campaign structures, ad copy, landing pages, and tracking infrastructure. On termination, Client receives a copy of any websites or landing pages built specifically for Client and may continue hosting them at Client's expense.
 
 7. CONFIDENTIALITY
-Each party will keep the other party's non-public business information confidential and use it only for the purpose of performing under this Agreement.
+   Each party will keep the other party's non-public business information confidential and use it only for the purpose of performing under this Agreement.
 
-8. LIMITATION OF LIABILITY
-Agency's aggregate liability under this Agreement is capped at the fees paid by Client to Agency in the three (3) months preceding the event giving rise to the claim. Neither party is liable for indirect, incidental, or consequential damages.
+8. AUTHORIZATION TO CHARGE
+   Client authorizes Agency to invoice the Setup Fee on signing and to begin recurring Monthly Retainer billing on the same calendar day each month, in {{currencyCode}}, via the payment method Client provides in Stripe. Booked appointment fees, where applicable, will be added to the upcoming invoice.
 
-9. GOVERNING LAW
-This Agreement is governed by the laws of the Province of Ontario, Canada, and the federal laws of Canada applicable therein.
+9. LIMITATION OF LIABILITY
+   Agency's aggregate liability under this Agreement is capped at the fees paid by Client to Agency in the three (3) months preceding the event giving rise to the claim. Neither party is liable for indirect, incidental, or consequential damages.
 
-10. ENTIRE AGREEMENT
-This Agreement, together with any signed Statements of Work, is the entire agreement between the parties on this subject.
+10. GOVERNING LAW
+    This Agreement is governed by the laws of the Province of Ontario, Canada, and the federal laws of Canada applicable therein, regardless of billing currency.
+
+11. ENTIRE AGREEMENT
+    This Agreement is the entire agreement between the parties on this subject and supersedes all prior discussions and proposals.
 
 SIGNATURES
 
@@ -122,64 +193,14 @@ Signature ({{customerName}})
 ________________________________
 Printed name
 
-Date: ________________________`,
-  },
+Date: ________________________`;
 
+export const CONTRACT_TEMPLATES: ContractTemplate[] = [
   {
-    id: "sow-google-ads",
-    type: "SCOPE_GOOGLE_ADS_MANAGEMENT",
-    name: "Statement of Work — Google Ads Management",
-    body: `STATEMENT OF WORK ("SOW") — Google Ads Management
-
-This SOW is dated {{date}} and supplements the Master Service Agreement between {{agencyName}} and {{businessName}}.
-
-1. SCOPE
-Agency will manage Google Ads Search campaigns for Client targeting Client's defined services and service areas. Scope includes campaign structure, keyword research, ad copy, negative keywords, conversion tracking, and weekly optimisation.
-
-2. ACCESS
-Client will grant Agency manager-level access to Client's Google Ads account via Manager Account (MCC) link request. Client retains ownership of the account.
-
-3. AD SPEND
-Client pays Google directly for media costs. Agency does not mark up media. Agency will alert Client if monthly spend will exceed the agreed budget by more than 10%.
-
-4. REPORTING
-Agency will deliver a monthly performance report through the TLM Portal showing spend, impressions, clicks, conversions, cost per lead, and cost per confirmed estimate appointment.
-
-5. CHANGES
-Client may pause or change the campaign budget at any time with 5 business days' notice.
-
-6. SIGNATURES
-
-For {{agencyName}}: ________________________________ Date: ________
-
-For {{businessName}}: ________________________________ Date: ________`,
-  },
-
-  {
-    id: "sow-landing-page",
-    type: "SCOPE_LANDING_PAGE",
-    name: "Statement of Work — Landing Page",
-    body: `STATEMENT OF WORK ("SOW") — Single-Service Landing Page
-
-This SOW is dated {{date}} and supplements the Master Service Agreement between {{agencyName}} and {{businessName}}.
-
-1. SCOPE
-Agency will design and build one (1) single-service landing page focused on Client's primary service. Page includes: hero with CTA, trust signals, service detail, service area list, FAQ, and an estimate request form that posts to the TLM Portal lead pipeline.
-
-2. PHONE NUMBERS
-The page will display the assigned TLM tracking number. Client's direct numbers will not appear on the page.
-
-3. HOSTING
-The page will be hosted on Agency's infrastructure (Vercel) under a subdomain of Client's domain or Agency's lead domain. On termination, Agency will hand over the source code if Client wishes to self-host.
-
-4. TIMELINE
-First draft within 7 business days of receiving Client's brand assets and copy approvals.
-
-5. SIGNATURES
-
-For {{agencyName}}: ________________________________ Date: ________
-
-For {{businessName}}: ________________________________ Date: ________`,
+    id: "master-onboarding",
+    type: "MASTER_SERVICE_AGREEMENT",
+    name: "Master Onboarding Agreement",
+    body: MASTER_ONBOARDING_BODY,
   },
 ];
 

@@ -58,6 +58,7 @@ async function main() {
       seoGbpMonthlyRetainer: dec(750),
       monthlyAdBudget: dec(2000),
       googleAdsBudgetCurrency: "CAD",
+      billingCurrency: "CAD",
       minProjectSize: dec(2500),
       status: "ACTIVE",
       services: {
@@ -105,10 +106,10 @@ async function main() {
     create: { userId: atlasUser.id, customerId: atlas.id, role: "CONTRACTOR" },
   });
 
-  // ----- Customer 2: Northside Interlock -----
+  // ----- Customer 2: Northside Interlock (USD billing for cross-currency tests) -----
   const northside = await db.customer.upsert({
     where: { slug: "northside-interlock" },
-    update: {},
+    update: { billingCurrency: "USD", googleAdsBudgetCurrency: "USD" },
     create: {
       slug: "northside-interlock",
       businessName: "Northside Interlock",
@@ -128,7 +129,8 @@ async function main() {
       appointmentFee: dec(100),
       seoGbpMonthlyRetainer: dec(0),
       monthlyAdBudget: dec(1500),
-      googleAdsBudgetCurrency: "CAD",
+      googleAdsBudgetCurrency: "USD",
+      billingCurrency: "USD",
       status: "ACTIVE",
       services: {
         create: [
