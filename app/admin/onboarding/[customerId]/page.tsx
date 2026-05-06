@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { spawnChecklistAction } from "@/server/actions/onboarding";
 import { ProvisionTrackingNumberForm } from "@/components/customers/provision-tracking-number-form";
 import { InviteUserForm } from "@/components/customers/invite-user-form";
-import { StartSubscriptionButton } from "@/components/billing/stripe-customer-actions";
+import { OnboardCustomerButton } from "@/components/billing/stripe-customer-actions";
 import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Onboarding — Admin" };
@@ -25,12 +25,16 @@ export default async function OnboardingWizard({
   const customer = await getCustomerById(ctx, customerId);
   if (!customer) notFound();
 
-  const [trackingCount, onboardingCount, contractsCount, subscription] = await Promise.all([
-    db.trackingNumber.count({ where: { customerId, status: "ACTIVE" } }),
-    db.onboardingItem.count({ where: { customerId } }),
-    db.contract.count({ where: { customerId } }),
-    db.stripeSubscription.findUnique({ where: { customerId } }),
-  ]);
+  const [trackingCount, onboardingCount, signedContractsCount, anyContractsCount, subscription] =
+    await Promise.all([
+      db.trackingNumber.count({ where: { customerId, status: "ACTIVE" } }),
+      db.onboardingItem.count({ where: { customerId } }),
+      // Only SIGNED contracts unblock billing — a DRAFT or SENT contract
+      // means the client hasn't accepted the fees yet.
+      db.contract.count({ where: { customerId, status: "SIGNED" } }),
+      db.contract.count({ where: { customerId } }),
+      db.stripeSubscription.findUnique({ where: { customerId } }),
+    ]);
 
   const userCount = customer.users.length;
   const servicesCount = customer.services.length;
@@ -62,15 +66,20 @@ export default async function OnboardingWizard({
     },
     {
       id: "msa",
-      title: "Master Service Agreement",
-      done: contractsCount > 0,
+      title: "Master Onboarding Agreement",
+      // The wizard considers this step done only when a SIGNED contract is
+      // on file. A generated/sent draft is not enough — the client needs to
+      // have accepted the fees and currency before we charge them.
+      done: signedContractsCount > 0,
       hint:
-        contractsCount === 0
-          ? "Generate the auto-filled MSA, print to PDF, send for signature."
-          : `${contractsCount} contracts on file`,
+        signedContractsCount > 0
+          ? `${signedContractsCount} signed on file`
+          : anyContractsCount > 0
+            ? `${anyContractsCount} draft on file — mark SIGNED once countersigned.`
+            : "Generate the auto-filled contract, print to PDF, send for signature.",
       cta: {
-        label: "Generate MSA",
-        href: `/admin/customers/${customer.id}/contract/msa-v1`,
+        label: "Generate contract",
+        href: `/admin/customers/${customer.id}/contract/master-onboarding`,
       },
     },
     {
@@ -93,11 +102,13 @@ export default async function OnboardingWizard({
     },
     {
       id: "stripe",
-      title: "Billing (Stripe subscription)",
+      title: "Billing (Stripe onboarding)",
       done: Boolean(subscription),
       hint: subscription
-        ? `Status: ${subscription.status}`
-        : "Start the recurring monthly retainer subscription.",
+        ? `Status: ${subscription.status} (${subscription.currency})`
+        : signedContractsCount > 0
+          ? "Click to invoice the setup fee and start the monthly subscription."
+          : "Sign the Master Onboarding Agreement first — then click to onboard.",
     },
   ];
 
@@ -210,7 +221,10 @@ export default async function OnboardingWizard({
                   <InviteUserForm customerId={customer.id} />
                 ) : null}
                 {step.id === "stripe" && !step.done ? (
-                  <StartSubscriptionButton customerId={customer.id} />
+                  <OnboardCustomerButton
+                    customerId={customer.id}
+                    contractSigned={signedContractsCount > 0}
+                  />
                 ) : null}
               </CardContent>
             </Card>

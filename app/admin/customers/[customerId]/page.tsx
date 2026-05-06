@@ -6,7 +6,7 @@ import { requireAdmin } from "@/lib/auth-guard";
 import { Card, CardContent } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { formatMoney } from "@/lib/money";
+import { formatMoney, isBillingCurrency, type BillingCurrency } from "@/lib/money";
 import { formatDate, startOfMonth } from "@/lib/dates";
 import { formatNational } from "@/lib/phone";
 import {
@@ -36,6 +36,10 @@ export default async function CustomerDetailPage({
   if (!customer) notFound();
 
   const monthStart = startOfMonth();
+  const currency: BillingCurrency = isBillingCurrency(customer.billingCurrency)
+    ? customer.billingCurrency
+    : "CAD";
+  const subscription = await db.stripeSubscription.findUnique({ where: { customerId } });
   const [leadsThisMonth, callsThisMonth, billableAppts, recentLeads, billing] =
     await Promise.all([
       db.lead.count({
@@ -91,6 +95,20 @@ export default async function CustomerDetailPage({
           <p className="text-sm text-muted-foreground mt-1">
             {customer.contactName} · {customer.email} · {formatNational(customer.phone)}
           </p>
+          <div className="mt-2 flex items-center gap-2 text-xs">
+            <span
+              className={
+                subscription
+                  ? "inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 font-semibold text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300"
+                  : "inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 font-semibold text-amber-700 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300"
+              }
+            >
+              {subscription
+                ? `Stripe: ${subscription.status} (${subscription.currency})`
+                : "Stripe: not onboarded"}
+            </span>
+            <span className="text-muted-foreground">Billing currency: {currency}</span>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Link
@@ -117,7 +135,7 @@ export default async function CustomerDetailPage({
         <Stat
           icon={Receipt}
           label="Billed this month"
-          value={formatMoney(billingThisMonth)}
+          value={formatMoney(billingThisMonth, currency)}
         />
       </div>
 
@@ -207,10 +225,10 @@ export default async function CustomerDetailPage({
             hint="Branded PDF for the contractor"
           />
           <ToolTile
-            href={`/admin/customers/${customer.id}/contract/msa-v1`}
+            href={`/admin/customers/${customer.id}/contract/master-onboarding`}
             icon={FileText}
-            label="Generate MSA"
-            hint="Auto-filled signing copy"
+            label="Generate onboarding contract"
+            hint="Auto-filled with services, fees, currency"
           />
         </div>
       </div>
@@ -258,12 +276,15 @@ export default async function CustomerDetailPage({
 
       {/* QUICK INFO STRIP ----------------------------------------- */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <InfoCard label="Monthly retainer" value={formatMoney(customer.monthlyRetainer)} />
         <InfoCard
-          label="Appointment fee"
+          label={`Monthly retainer (${currency})`}
+          value={formatMoney(customer.monthlyRetainer, currency)}
+        />
+        <InfoCard
+          label={`Appointment fee (${currency})`}
           value={
             customer.leadEngineEnabled && Number(customer.appointmentFee) > 0
-              ? formatMoney(customer.appointmentFee)
+              ? formatMoney(customer.appointmentFee, currency)
               : "—"
           }
         />
